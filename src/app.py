@@ -111,14 +111,19 @@ def main():
                     st.session_state.selected_role = role
         
         # Afficher les stats du joueur pour le rôle sélectionné
-        role_to_player = {
-            "TOP": "Claquette",
-            "JUNGLE": "Spectros",
-            "MID": "Futeyy",
-            "ADC": "Tixty",
-            "SUPPORT": "Dert"
-        }
-        display_player_stats(analyzer, role_to_player[st.session_state.selected_role])
+        if st.session_state.selected_role == "ADC":
+            # Pour le rôle ADC, afficher un sélecteur de joueur
+            adc_players = ["Tixty", "D4ff"]
+            selected_adc = st.selectbox("Sélectionner l'ADC:", adc_players)
+            display_player_stats(analyzer, selected_adc)
+        else:
+            role_to_player = {
+                "TOP": "Claquette",
+                "JUNGLE": "Spectros",
+                "MID": "Futeyy",
+                "SUPPORT": "Dert"
+            }
+            display_player_stats(analyzer, role_to_player[st.session_state.selected_role])
     else:
         stats = analyzer.get_global_stats()
         display_global_stats(stats)

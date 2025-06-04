@@ -18,11 +18,17 @@ def format_champion_name(name: str) -> str:
 def get_champion_icon_url(champion_name: str) -> str:
     """Get the champion icon URL from Data Dragon."""
     formatted_name = champion_name.replace(" ", "")  # Enlève les espaces
+    if(formatted_name == "Wukong"):
+        formatted_name = "MonkeyKing"
     return f"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/{formatted_name}.png"
 
 def display_player_stats(analyzer, player_name: str):
     stats = analyzer.get_player_stats(player_name)
     
+    if stats['total_games'] == 0:
+        st.warning(f"Aucune partie trouvée pour {player_name}")
+        return
+        
     # Stats générales (première ligne)
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
