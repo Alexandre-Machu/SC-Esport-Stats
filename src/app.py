@@ -62,16 +62,24 @@ def main():
     col1, col2, space = st.columns([2, 2, 8])
     
     with col1:
-        if st.button("📊 Statistiques Globales", 
-                    use_container_width=True,
-                    type="primary" if st.session_state.current_page == 'global' else "secondary"):
+        if st.button(
+            "📊 Statistiques Globales", 
+            key="btn_global",
+            use_container_width=True,
+            type="primary" if st.session_state.current_page == 'global' else "secondary"
+        ):
             st.session_state.current_page = 'global'
+            st.rerun()  # Force la page à se recharger
     
     with col2:
-        if st.button("👤 Statistiques par Joueur", 
-                    use_container_width=True,
-                    type="primary" if st.session_state.current_page == 'player' else "secondary"):
+        if st.button(
+            "👤 Statistiques par Joueur", 
+            key="btn_player",
+            use_container_width=True,
+            type="primary" if st.session_state.current_page == 'player' else "secondary"
+        ):
             st.session_state.current_page = 'player'
+            st.rerun()  # Force la page à se recharger
     
     st.divider()
 
@@ -96,20 +104,21 @@ def main():
             </style> 
         """, unsafe_allow_html=True)
         
-        # Sélection du rôle avec style
+        # Création des boutons pour chaque rôle
         roles = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"]
-        role_cols = st.columns(len(roles))
+        cols = st.columns(len(roles))
         
-        for idx, (col, role) in enumerate(zip(role_cols, roles)):
-            with col:
+        for i, role in enumerate(roles):
+            with cols[i]:
                 if st.button(
                     role,
-                    key=f"role_{role}",
-                    use_container_width=True,
-                    type="primary" if st.session_state.selected_role == role else "secondary"
+                    key=f"btn_{role}",
+                    type="primary" if st.session_state.selected_role == role else "secondary",
+                    use_container_width=True
                 ):
                     st.session_state.selected_role = role
-        
+                    st.rerun()  # Force la page à se recharger complètement
+    
         # Afficher les stats du joueur pour le rôle sélectionné
         if st.session_state.selected_role == "ADC":
             # Pour le rôle ADC, afficher un sélecteur de joueur
