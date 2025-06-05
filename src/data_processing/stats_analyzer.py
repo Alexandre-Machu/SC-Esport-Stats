@@ -32,12 +32,71 @@ class StatsAnalyzer:
             }
         }
 
+    def parse_filename(self, filename: str) -> Dict:
+        """Parse un nom de fichier pour extraire les informations de la partie."""
+        try:
+            # Enlever l'extension .json et diviser
+            parts = filename.replace('.json', '').split('_')
+            
+            # Valeurs par défaut au cas où certains éléments manquent
+            game_info = {
+                'game_id': 'Unknown',
+                'date': '01/01/2025',  # Date par défaut
+                'type_partie': 'Unknown',
+                'equipe_adverse': 'Unknown',
+                'numero_game': 'Game 1',  # Ajout d'un espace
+                'numero_match': 'Match 1'  # Ajout d'un espace
+            }
+            
+            # Format attendu: IDGame_Date_TypePartie_EquipeAdverse_NumeroGame_NumeroMatch
+            if len(parts) >= 1:
+                game_info['game_id'] = parts[0]
+                
+            if len(parts) >= 2:
+                date_str = parts[1]
+                if len(date_str) == 8:
+                    day = date_str[:2]
+                    month = date_str[2:4]
+                    year = date_str[4:]
+                    game_info['date'] = f"{day}/{month}/{year}"
+                    
+            if len(parts) >= 3:
+                game_info['type_partie'] = parts[2]
+                
+            if len(parts) >= 4:
+                game_info['equipe_adverse'] = parts[3]
+                
+            if len(parts) >= 5:
+                # Ajouter un espace après "Game"
+                game_num = parts[4].replace('Game', 'Game ')
+                game_info['numero_game'] = game_num
+                
+            if len(parts) >= 6:
+                # Ajouter un espace après "Match"
+                match_num = parts[5].replace('Match', 'Match ')
+                game_info['numero_match'] = match_num
+                
+            return game_info
+            
+        except Exception as e:
+            print(f"Error parsing filename {filename}: {str(e)}")
+            return {
+                'game_id': filename.replace('.json', ''),
+                'date': '01/01/2025',
+                'type_partie': 'Unknown',
+                'equipe_adverse': 'Unknown',
+                'numero_game': 'Game 1',
+                'numero_match': 'Match 1'
+            }
+
     def load_data(self) -> List[Dict]:
         all_games = []
         for filename in os.listdir(self.data_path):
             if filename.endswith('.json'):
                 with open(os.path.join(self.data_path, filename), 'r') as f:
                     game_data = json.load(f)
+                    # Ajouter les informations du filename au game_data
+                    game_data['file_info'] = self.parse_filename(filename)
                     all_games.append(game_data)
         return all_games
 
@@ -130,7 +189,12 @@ class StatsAnalyzer:
                         'NUM_DEATHS': d,
                         'ASSISTS': a,
                         'Missions_CreepScore': cs,
-                        'VISION_SCORE': int(participant['VISION_SCORE'])
+                        'VISION_SCORE': int(participant['VISION_SCORE']),
+                        'date': game['file_info']['date'],
+                        'type_partie': game['file_info']['type_partie'],
+                        'equipe_adverse': game['file_info']['equipe_adverse'],
+                        'numero_game': game['file_info']['numero_game'],
+                        'numero_match': game['file_info']['numero_match']
                     })
         
         # Gestion du cas où aucune partie n'est trouvée

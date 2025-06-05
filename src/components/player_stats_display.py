@@ -20,7 +20,7 @@ def get_champion_icon_url(champion_name: str) -> str:
     formatted_name = champion_name.replace(" ", "")  # Enlève les espaces
     if(formatted_name == "Wukong"):
         formatted_name = "MonkeyKing"
-    return f"https://ddragon.leagueoflegends.com/cdn/15.1.1/img/champion/{formatted_name}.png"
+    return f"https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/{formatted_name}.png"
 
 def display_player_stats(analyzer, player_name: str):
     stats = analyzer.get_player_stats(player_name)
@@ -99,6 +99,15 @@ def display_player_stats(analyzer, player_name: str):
     st.subheader("Historique des parties")
     history_df = pd.DataFrame(stats['match_history'])
     
+    # Conversion de la date pour le tri
+    history_df['date'] = pd.to_datetime(history_df['date'], format='%d/%m/%Y')
+    
+    # Tri par date décroissante
+    history_df = history_df.sort_values('date', ascending=False)
+    
+    # Conversion de la date pour l'affichage
+    history_df['date'] = history_df['date'].dt.strftime('%d/%m/%Y')
+    
     # Formatage des champions et ajout des icônes
     history_df['SKIN'] = history_df['SKIN'].apply(format_champion_name)
     history_df['Champion_Icon'] = history_df['SKIN'].apply(
@@ -122,15 +131,19 @@ def display_player_stats(analyzer, player_name: str):
     history_df['Win'] = history_df['Win'].map({'Win': 'Win', 'Fail': 'Lose'})
     
     columns_to_display = {
+        'date': 'Date',
         'Champion_Icon': 'Champion',
         'Win': 'W/L',
+        'type_partie': 'Type',
+        'equipe_adverse': 'VS',
+        'numero_game': 'Game',
         'Durée Game': 'Durée',
         'KDA': 'KDA',
         'CHAMPIONS_KILLED': 'Kills',
         'NUM_DEATHS': 'Deaths',
         'ASSISTS': 'Assists',
         'CS/min': 'CS/min',
-        'VISION_SCORE': 'Vision'
+        'VISION_SCORE': 'Vision Score'
     }
     
     st.markdown(
