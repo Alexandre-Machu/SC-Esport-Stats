@@ -102,8 +102,10 @@ def display_player_stats(analyzer, player_name: str):
     # Conversion de la date pour le tri
     history_df['date'] = pd.to_datetime(history_df['date'], format='%d/%m/%Y')
     
-    # Tri par date décroissante
-    history_df = history_df.sort_values('date', ascending=False)
+    # Tri par date puis par numéro de game
+    history_df['game_number'] = history_df['numero_game'].str.extract('(\d+)').astype(int)
+    history_df = history_df.sort_values(['date', 'game_number'], ascending=[False, True])
+    history_df = history_df.drop('game_number', axis=1)  # On supprime la colonne temporaire
     
     # Conversion de la date pour l'affichage
     history_df['date'] = history_df['date'].dt.strftime('%d/%m/%Y')
@@ -130,6 +132,17 @@ def display_player_stats(analyzer, player_name: str):
     # Remplacer "Fail" par "Lose"
     history_df['Win'] = history_df['Win'].map({'Win': 'Win', 'Fail': 'Lose'})
     
+    # Ajout des emojis pour Win/Lose et Type de partie
+    history_df['Win'] = history_df['Win'].map({
+        'Win': '✅ Win',
+        'Lose': '❌ Lose'
+    })
+    
+    history_df['type_partie'] = history_df['type_partie'].map({
+        'Scrim': '⚔️ Scrim',
+        'Tournoi': '🛡️ Tournoi'
+    })
+    
     columns_to_display = {
         'date': 'Date',
         'Champion_Icon': 'Champion',
@@ -146,14 +159,41 @@ def display_player_stats(analyzer, player_name: str):
         'VISION_SCORE': 'Vision Score'
     }
     
+    # Ajout d'une colonne pour grouper les matchs par adversaire et date
+    history_df['match_group'] = history_df['date'] + history_df['equipe_adverse']
+    
+    # Formatage du tableau
     st.markdown(
         history_df[columns_to_display.keys()]
         .rename(columns=columns_to_display)
         .style.format({
             'KDA': '{:.2f}',
             'CS/min': '{:.1f}',
-            'Vision': '{:.0f}'
+            'Vision Score': '{:.0f}'
         })
+        .set_table_styles([
+            {'selector': 'thead', 'props': [('background-color', '#1e1e1e'), ('color', 'white')]},
+            # Bordure fine entre chaque ligne
+            {'selector': 'tr', 'props': 'border-bottom: 1px solid rgba(128,128,128,0.2)'},
+            # Bordure épaisse entre les différents groupes de scrims
+            {'selector': 'tr:has(td:contains("Game 1"))', 'props': 'border-top: 10px solid rgba(128,128,128,0.8) !important'},
+            # Style pour les index
+            {'selector': '.row_heading', 'props': [('background-color', '#1e1e1e'), ('color', 'white')]},
+        ])
         .to_html(escape=False),
         unsafe_allow_html=True
     )
+    
+    # CSS personnalisé pour améliorer la séparation visuelle
+    st.markdown("""
+        <style>
+        .dataframe tr td { padding: 0.5rem; }
+        .dataframe tr:has(td:contains("Game 1")) { 
+            padding-top: 1.5rem !important;
+            margin-top: 1.5rem !important;
+        }
+        .dataframe tbody tr:has(td:contains("Game 1")) td {
+            border-top: 8px solid rgba(128,128,128,0.3) !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
