@@ -149,6 +149,18 @@ class StatsAnalyzer:
                             wins += 1
                     break  # Only need to check one TSC player per game
 
+        # Ajouter la collecte des stats des champions
+        champion_stats = {}
+        for game in games:
+            for player in game['participants']:
+                champion = player.get('SKIN')
+                if champion:
+                    if champion not in champion_stats:
+                        champion_stats[champion] = {'games': 0, 'wins': 0}
+                    champion_stats[champion]['games'] += 1
+                    if player.get('WIN') == 'Win':
+                        champion_stats[champion]['wins'] += 1
+        
         return {
             'total_games': total_games,
             'wins': wins,
@@ -159,7 +171,8 @@ class StatsAnalyzer:
             'blue_side_winrate': (blue_side_wins / blue_side_games) * 100 if blue_side_games > 0 else 0,
             'red_side_games': red_side_games,
             'red_side_wins': red_side_wins,
-            'red_side_winrate': (red_side_wins / red_side_games) * 100 if red_side_games > 0 else 0
+            'red_side_winrate': (red_side_wins / red_side_games) * 100 if red_side_games > 0 else 0,
+            'champion_stats': champion_stats
         }
 
     def get_player_stats(self, player_name: str, filter_type: str = None) -> Dict:
