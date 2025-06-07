@@ -119,9 +119,18 @@ def display_player_stats(analyzer, player_name: str):
         # Format date
         df['date'] = pd.to_datetime(df['date'], format='%d%m%Y')
         
-        # Sort by date (descending) and game number
-        df['game_number'] = df['numero_game'].str.extract('(\d+)').astype(int)
-        df = df.sort_values(['date', 'game_number'], ascending=[False, True])
+        # Extract tournament game number from filename
+        df['game_number'] = df.apply(lambda row: 
+            int(row['game_tournoi'].replace('GameTournoi', '')) if pd.notnull(row.get('game_tournoi')) 
+            else int(pd.Series(row['numero_game']).str.extract('(\d+)').iloc[0,0]), 
+            axis=1
+        )
+
+        # Sort by date (descending) and tournament game number (descending)
+        df = df.sort_values(
+            ['date', 'game_number'], 
+            ascending=[False, False]  # Changed to False for game_number to sort 4->1
+        )
         
         # Format date for display
         df['date'] = df['date'].dt.strftime('%d/%m/%Y')
