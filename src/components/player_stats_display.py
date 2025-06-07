@@ -103,8 +103,8 @@ def display_player_stats(analyzer, player_name: str):
             title="Nombre de games par champion (Victoires vs Défaites)",
             xaxis_title="Champions",
             yaxis_title="Nombre de games",
-            paper_bgcolor='#000000',
-            plot_bgcolor='#000000',
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
             font=dict(color='white'),
             showlegend=True
         )
