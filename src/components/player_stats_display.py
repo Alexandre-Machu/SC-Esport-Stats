@@ -209,44 +209,37 @@ def display_player_stats(analyzer, player_name: str):
         # Replace the numeric conversion code with:
 
         def safe_numeric_conversion(value, default=0.0):
-            if pd.isna(value) or value == '' or value is None:  # Vérifie NaN ici
+            if not value or value == '':  # Simple check for empty/None values
                 return default
             try:
                 return float(value)
             except (ValueError, TypeError):
                 return default
 
-        def safe_kda_calculation(kda_string):
-            if pd.isna(kda_string) or not isinstance(kda_string, str):  # Vérifie NaN ici
-                return 0.0
+        def safe_kda_calculation(kda_string, default=0.0):
+            if not isinstance(kda_string, str) or not kda_string:  # Check for non-string or empty
+                return default
             try:
                 parts = kda_string.split('/')
                 if len(parts) != 3:
-                    return 0.0
-                k = safe_numeric_conversion(parts[0])
+                    return default
+                k = safe_numeric_conversion(parts[0], 0.0)
                 d = safe_numeric_conversion(parts[1], 1.0)  # default to 1 to avoid division by zero
-                a = safe_numeric_conversion(parts[2])
+                a = safe_numeric_conversion(parts[2], 0.0)
                 return (k + a) / max(1.0, d)
             except (ValueError, AttributeError, TypeError, ZeroDivisionError):
-                return 0.0
+                return default
+
+        # Initialize columns with default values first
+        display_df['KDA'] = display_df['KDA'].fillna('0/0/0')
+        display_df['CS/min'] = display_df['CS/min'].fillna(0.0)
+        display_df['Vision Score'] = display_df['Vision Score'].fillna(0.0)
 
         # Convert numeric columns safely
-        display_df['KDA'] = display_df['KDA'].apply(safe_kda_calculation)
-        display_df['CS/min'] = display_df['CS/min'].apply(safe_numeric_conversion)
-        display_df['Vision Score'] = display_df['Vision Score'].apply(safe_numeric_conversion)
-
-        # Remplacer les NaN par des valeurs par défaut
-        display_df = display_df.fillna({
-            'KDA': '0/0/0',
-            'CS/min': 0.0,
-            'Vision Score': 0.0
-        })
-
-        # Créer un nouveau DataFrame avec seulement les colonnes traitées
         display_df_clean = display_df.copy()
-        display_df_clean['KDA'] = display_df_clean['KDA'].apply(safe_kda_calculation)
-        display_df_clean['CS/min'] = display_df_clean['CS/min'].apply(safe_numeric_conversion)
-        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].apply(safe_numeric_conversion)
+        display_df_clean['KDA'] = display_df_clean['KDA'].apply(lambda x: safe_kda_calculation(x, 0.0))
+        display_df_clean['CS/min'] = display_df_clean['CS/min'].apply(lambda x: safe_numeric_conversion(x, 0.0))
+        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].apply(lambda x: safe_numeric_conversion(x, 0.0))
 
         # Format and display
         st.markdown(
