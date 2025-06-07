@@ -168,9 +168,9 @@ def display_player_stats(analyzer, player_name: str):
             'VISION_SCORE'
         ]
 
-        # Add tournament name column only for tournament games
-        if game_type == "Tournois" or game_type == "Global":
-            columns_to_display.insert(4, 'nom_tournoi')  # Insert after type_partie
+        # Add tournament name column ONLY for tournament games (not for Global view)
+        if game_type == "Tournois":  # Removed Global from this condition
+            columns_to_display.insert(4, 'nom_tournoi')
 
         display_df = df[columns_to_display].rename(columns={
             'date': 'Date',
@@ -188,7 +188,8 @@ def display_player_stats(analyzer, player_name: str):
             'VISION_SCORE': 'Vision Score'
         })
 
-        if game_type == "Tournois" or game_type == "Global":
+        # Rename tournament column only if it exists (for tournament games)
+        if game_type == "Tournois":  # Removed Global from this condition
             display_df = display_df.rename(columns={'nom_tournoi': 'Tournoi'})
 
         # Format the duration from milliseconds to mm:ss
@@ -205,7 +206,7 @@ def display_player_stats(analyzer, player_name: str):
             'Tournoi': '🛡️ Tournoi'
         })
 
-        # Remplacer les fonctions de conversion et leur application par:
+        # Replace the numeric conversion code with:
 
         def safe_numeric_conversion(value, default=0.0):
             if pd.isna(value) or value == '' or value is None:
