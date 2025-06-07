@@ -27,7 +27,10 @@ def display_player_stats(analyzer, player_name: str):
     game_type = st.selectbox(
         "Type de parties",
         ["Global", "Scrims", "Tournois"],
-        key="player_stats_type"
+        key="player_stats_type",
+        disabled=False,  # Mettre à True si vous voulez désactiver complètement
+        label_visibility="visible",
+        help="Filtrer l'affichage par type de parties"
     )
     
     # Obtenir les stats filtrées
