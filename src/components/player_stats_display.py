@@ -124,7 +124,7 @@ def display_player_stats(analyzer, player_name: str):
         
         # Extract tournament game number from filename
         df['game_number'] = df.apply(lambda row: 
-            int(row['game_tournoi'].replace('GameTournoi', '')) if pd.notnull(row.get('game_tournoi')) 
+            int(row['game_tournoi'].replace('GameTournoi', '')) if pd.notnull(row.get('game_tournoi'))  # Vérifie non-NaN ici
             else int(pd.Series(row['numero_game']).str.extract('(\d+)').iloc[0,0]), 
             axis=1
         )
@@ -209,7 +209,7 @@ def display_player_stats(analyzer, player_name: str):
         # Replace the numeric conversion code with:
 
         def safe_numeric_conversion(value, default=0.0):
-            if pd.isna(value) or value == '' or value is None:
+            if pd.isna(value) or value == '' or value is None:  # Vérifie NaN ici
                 return default
             try:
                 return float(value)
@@ -217,7 +217,7 @@ def display_player_stats(analyzer, player_name: str):
                 return default
 
         def safe_kda_calculation(kda_string):
-            if pd.isna(kda_string) or not isinstance(kda_string, str):
+            if pd.isna(kda_string) or not isinstance(kda_string, str):  # Vérifie NaN ici
                 return 0.0
             try:
                 parts = kda_string.split('/')
@@ -235,11 +235,18 @@ def display_player_stats(analyzer, player_name: str):
         display_df['CS/min'] = display_df['CS/min'].apply(safe_numeric_conversion)
         display_df['Vision Score'] = display_df['Vision Score'].apply(safe_numeric_conversion)
 
-        # Create new DataFrame with only the processed columns
+        # Remplacer les NaN par des valeurs par défaut
+        display_df = display_df.fillna({
+            'KDA': '0/0/0',
+            'CS/min': 0.0,
+            'Vision Score': 0.0
+        })
+
+        # Créer un nouveau DataFrame avec seulement les colonnes traitées
         display_df_clean = display_df.copy()
-        display_df_clean['KDA'] = display_df_clean['KDA'].astype(float)
-        display_df_clean['CS/min'] = display_df_clean['CS/min'].astype(float)
-        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].astype(float)
+        display_df_clean['KDA'] = display_df_clean['KDA'].apply(safe_kda_calculation)
+        display_df_clean['CS/min'] = display_df_clean['CS/min'].apply(safe_numeric_conversion)
+        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].apply(safe_numeric_conversion)
 
         # Format and display
         st.markdown(
