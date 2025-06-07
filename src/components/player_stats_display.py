@@ -205,14 +205,18 @@ def display_player_stats(analyzer, player_name: str):
             'Tournoi': '🛡️ Tournoi'
         })
 
-        # Avant le formatage, convertissons les colonnes en nombres
-        display_df['KDA'] = pd.to_numeric(display_df['KDA'].str.split('/').apply(
-            lambda x: (int(x[0]) + int(x[2])) / max(1, int(x[1]))
-        ))
-        display_df['CS/min'] = pd.to_numeric(display_df['CS/min'])
-        display_df['Vision Score'] = pd.to_numeric(display_df['Vision Score'])
+        # Avant le formatage, convertissons les colonnes en nombres avec gestion des NaN
+        display_df['KDA'] = pd.to_numeric(
+            display_df['KDA'].str.split('/').apply(
+                lambda x: (int(float(x[0]) if x[0] else 0) + int(float(x[2]) if x[2] else 0)) / max(1, int(float(x[1]) if x[1] else 1))
+            ),
+            errors='coerce'  # Convertit les valeurs non numériques en NaN
+        ).fillna(0)  # Remplace les NaN par 0
 
-        # Maintenant le formatage fonctionnera
+        display_df['CS/min'] = pd.to_numeric(display_df['CS/min'], errors='coerce').fillna(0)
+        display_df['Vision Score'] = pd.to_numeric(display_df['Vision Score'], errors='coerce').fillna(0)
+
+        # Maintenant le formatage
         st.markdown(
             display_df.style.format({
                 'KDA': '{:.2f}',
