@@ -78,17 +78,19 @@ def display_player_stats(analyzer, player_name: str):
             champion_stats[champ]['total'] += 1
             if result == 'Win':
                 champion_stats[champ]['wins'] += 1
-        
+    
         # Create lists for the graph
-        champions = list(champion_stats.keys())
-        wins = [champion_stats[c]['wins'] for c in champions]
-        losses = [champion_stats[c]['total'] - champion_stats[c]['wins'] for c in champions]
+        original_champs = list(champion_stats.keys())  # Store original names
+        champions = [format_champion_name(champ) for champ in original_champs]  # Format for display
+        wins = [champion_stats[champ]['wins'] for champ in original_champs]
+        losses = [champion_stats[champ]['total'] - champion_stats[champ]['wins'] for champ in original_champs]
         
         # Sort by total games
         sorted_indices = sorted(range(len(champions)), 
-                             key=lambda i: champion_stats[champions[i]]['total'], 
+                             key=lambda i: champion_stats[original_champs[i]]['total'], 
                              reverse=True)
         champions = [champions[i] for i in sorted_indices]
+        original_champs = [original_champs[i] for i in sorted_indices]  # Keep original names in sync
         wins = [wins[i] for i in sorted_indices]
         losses = [losses[i] for i in sorted_indices]
         
@@ -148,7 +150,7 @@ def display_player_stats(analyzer, player_name: str):
         
         # Add champion icons
         df['Champion_Icon'] = df['SKIN'].apply(
-            lambda x: f'<img src="{get_champion_icon_url(x)}" width="30" height="30" style="vertical-align:middle"> {x}'
+            lambda x: f'<img src="{get_champion_icon_url(x)}" width="30" height="30" style="vertical-align:middle"> {format_champion_name(x)}'
         )
         
         # Add these calculations before creating display_df
