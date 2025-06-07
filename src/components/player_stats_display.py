@@ -239,7 +239,7 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
         df['Deaths'] = df['KDA'].str.split('/').str[1].astype(int)
         df['Assists'] = df['KDA'].str.split('/').str[2].astype(int)
 
-        # Create and display table
+        # Définir les colonnes de base
         columns_to_display = [
             'date',
             'Champion_Icon',
@@ -256,8 +256,8 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
             'VISION_SCORE'
         ]
 
-        # Add tournament name column based on game_type
-        if game_type in ["Tournois", "Global"]:
+        # Ajouter la colonne du tournoi uniquement si on n'est pas en mode Global
+        if game_type == "Tournoi":  # Modification ici : "Tournois" -> "Tournoi"
             columns_to_display.insert(4, 'nom_tournoi')
 
         display_df = df[columns_to_display].rename(columns={
@@ -276,8 +276,8 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
             'VISION_SCORE': 'Vision Score'
         })
 
-        # Rename tournament column only if it exists
-        if game_type in ["Tournois", "Global"]:
+        # Renommer la colonne du tournoi uniquement si elle existe
+        if game_type == "Tournoi":  # Modification ici aussi : "Tournois" -> "Tournoi"
             display_df = display_df.rename(columns={'nom_tournoi': 'Tournoi'})
 
         # Format the duration from milliseconds to mm:ss
