@@ -125,19 +125,71 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
         
         # Create stacked bar chart
         fig = go.Figure(data=[
-            go.Bar(name='Victoires', x=champions, y=wins, marker_color='#2ECC71'),
-            go.Bar(name='Défaites', x=champions, y=losses, marker_color='#E74C3C')
+            go.Bar(
+                name='Victoires',
+                x=champions,
+                y=wins,
+                marker_color='#2ECC71',
+                width=0.5,  # Réduire la largeur des barres
+                hovertemplate="Victoires: %{y}<extra></extra>"
+            ),
+            go.Bar(
+                name='Défaites',
+                x=champions,
+                y=losses,
+                marker_color='#E74C3C',
+                width=0.5,  # Réduire la largeur des barres
+                hovertemplate="Défaites: %{y}<extra></extra>"
+            )
         ])
         
         fig.update_layout(
             barmode='stack',
-            title="Nombre de games par champion (Victoires vs Défaites)",
+            title={
+                'text': "Nombre de games par champion",
+                'y': 0.95,
+                'x': 0.5,
+                'xanchor': 'center',
+                'yanchor': 'top',
+                'font': dict(size=20)
+            },
             xaxis_title="Champions",
             yaxis_title="Nombre de games",
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white'),
-            showlegend=True
+            font=dict(
+                color='white',
+                size=14
+            ),
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="right",
+                x=0.99,  # Changé de 0.01 à 0.99
+                bgcolor='rgba(0,0,0,0)',
+                bordercolor='rgba(0,0,0,0)'
+            ),
+            modebar_remove=['zoom', 'pan', 'select', 'zoomIn', 'zoomOut', 'autoScale', 'lasso2d'],  # Enlever les icônes
+            margin=dict(t=80, b=40, l=60, r=40)  # Ajuster les marges
+        )
+        
+        # Améliorer l'apparence des axes
+        fig.update_xaxes(
+            showgrid=False,
+            showline=True,
+            linewidth=2,
+            linecolor='rgba(255,255,255,0.2)',
+            tickangle=45  # Rotation des labels pour meilleure lisibilité
+        )
+
+        fig.update_yaxes(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='rgba(255,255,255,0.1)',
+            showline=True,
+            linewidth=2,
+            linecolor='rgba(255,255,255,0.2)'
         )
         
         st.plotly_chart(fig, use_container_width=True)
