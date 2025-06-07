@@ -124,7 +124,7 @@ def display_player_stats(analyzer, player_name: str):
         
         # Extract tournament game number from filename
         df['game_number'] = df.apply(lambda row: 
-            int(row['game_tournoi'].replace('GameTournoi', '')) if pd.notnull(row.get('game_tournoi'))  # Vérifie non-NaN ici
+            int(row['game_tournoi'].replace('GameTournoi', '')) if pd.notnull(row.get('game_tournoi'))
             else int(pd.Series(row['numero_game']).str.extract('(\d+)').iloc[0,0]), 
             axis=1
         )
@@ -139,7 +139,12 @@ def display_player_stats(analyzer, player_name: str):
         df['date'] = df['date'].dt.strftime('%d/%m/%Y')
         
         # Calculate CS/min
-        df['CS/min'] = df['MINIONS_KILLED'].astype(float) / (df['gameDuration'].astype(float) / 60000)
+        df['CS/min'] = df.apply(lambda row: 
+            float(row['MINIONS_KILLED']) / (float(row['gameDuration']) / 60000) 
+            if row['MINIONS_KILLED'] and row['gameDuration'] 
+            else 0.0, 
+            axis=1
+        )
         
         # Add champion icons
         df['Champion_Icon'] = df['SKIN'].apply(
@@ -209,7 +214,7 @@ def display_player_stats(analyzer, player_name: str):
         # Replace the numeric conversion code with:
 
         def safe_numeric_conversion(value, default=0.0):
-            if not value or value == '':  # Simple check for empty/None values
+            if not value or str(value).strip() == '':
                 return default
             try:
                 return float(value)
@@ -217,31 +222,26 @@ def display_player_stats(analyzer, player_name: str):
                 return default
 
         def safe_kda_calculation(kda_string, default=0.0):
-            if not isinstance(kda_string, str) or not kda_string:  # Check for non-string or empty
+            if not isinstance(kda_string, str) or not kda_string:
                 return default
             try:
                 parts = kda_string.split('/')
                 if len(parts) != 3:
                     return default
                 k = safe_numeric_conversion(parts[0], 0.0)
-                d = safe_numeric_conversion(parts[1], 1.0)  # default to 1 to avoid division by zero
+                d = safe_numeric_conversion(parts[1], 1.0)
                 a = safe_numeric_conversion(parts[2], 0.0)
                 return (k + a) / max(1.0, d)
             except (ValueError, AttributeError, TypeError, ZeroDivisionError):
                 return default
 
-        # Initialize columns with default values first
-        display_df['KDA'] = display_df['KDA'].fillna('0/0/0')
-        display_df['CS/min'] = display_df['CS/min'].fillna(0.0)
-        display_df['Vision Score'] = display_df['Vision Score'].fillna(0.0)
-
-        # Convert numeric columns safely
+        # Conversion directe des colonnes
         display_df_clean = display_df.copy()
-        display_df_clean['KDA'] = display_df_clean['KDA'].apply(lambda x: safe_kda_calculation(x, 0.0))
-        display_df_clean['CS/min'] = display_df_clean['CS/min'].apply(lambda x: safe_numeric_conversion(x, 0.0))
-        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].apply(lambda x: safe_numeric_conversion(x, 0.0))
+        display_df_clean['KDA'] = display_df_clean['KDA'].apply(safe_kda_calculation)
+        display_df_clean['CS/min'] = display_df_clean['CS/min'].apply(safe_numeric_conversion)
+        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].apply(safe_numeric_conversion)
 
-        # Format and display
+        # Affichage sans conversion de type supplémentaire
         st.markdown(
             display_df_clean.style.format({
                 'KDA': '{:.2f}',
@@ -250,8 +250,7 @@ def display_player_stats(analyzer, player_name: str):
             })
             .set_table_styles([
                 {'selector': 'thead', 'props': [('background-color', '#1e1e1e'), ('color', 'white')]},
-                {'selector': 'tr', 'props': 'border-bottom: 1px solid rgba(128,128,128,0.2)'},
-                {'selector': 'tr:has(td:contains("Game 1"))', 'props': 'border-top: 10px solid rgba(128,128,128,0.8) !important'},
+                {'selector': 'tr', 'props': 'border-bottom: 1px solid rgba(128,128,128,0.2)'}
             ])
             .to_html(escape=False),
             unsafe_allow_html=True
