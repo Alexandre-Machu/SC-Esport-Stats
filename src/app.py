@@ -88,6 +88,14 @@ def main():
     
     st.divider()
 
+    # Ajout du sélecteur de type de partie après la navbar
+    game_types = ["Global", "Scrim", "Tournoi"]
+    selected_game_type = st.selectbox(
+        "Type de parties",
+        game_types,
+        key="game_type_selector"
+    )
+    
     # Gestion de la navigation
     if st.session_state.current_page == 'player':
         st.header("Statistiques par joueur")
@@ -118,12 +126,11 @@ def main():
                     st.session_state.selected_role = role
                     st.rerun()  # Force la page à se recharger complètement
     
-        # Afficher les stats du joueur pour le rôle sélectionné
+        # Mise à jour de l'affichage des stats joueur avec le type sélectionné
         if st.session_state.selected_role == "ADC":
-            # Pour le rôle ADC, afficher un sélecteur de joueur
             adc_players = ["Tixty", "D4ff"]
             selected_adc = st.selectbox("Sélectionner l'ADC:", adc_players)
-            display_player_stats(analyzer, selected_adc)
+            display_player_stats(analyzer, selected_adc, selected_game_type)
         else:
             role_to_player = {
                 "TOP": "Claquette",
@@ -131,10 +138,10 @@ def main():
                 "MID": "Futeyy",
                 "SUPPORT": "Dert"
             }
-            display_player_stats(analyzer, role_to_player[st.session_state.selected_role], "Global")
+            display_player_stats(analyzer, role_to_player[st.session_state.selected_role], selected_game_type)
     else:
         st.title("Statistiques Globales")
-        display_global_stats(analyzer)  # Pass the analyzer object, not stats dictionary
+        display_global_stats(analyzer, selected_game_type)  # Ajout du type de partie
 
 def get_image_as_base64(image_path):
     import base64

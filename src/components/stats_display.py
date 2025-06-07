@@ -1,8 +1,7 @@
 import streamlit as st
 
-def display_global_stats(analyzer):
-    # Get stats from analyzer
-    stats = analyzer.get_global_stats()
+def display_global_stats(analyzer, game_type: str = "Global"):
+    stats = analyzer.get_global_stats(game_type)  # Modifier cette fonction pour filtrer selon le type
     #print("Debug - Stats structure:", stats)  # Pour débugger
 
     # Style CSS mis à jour

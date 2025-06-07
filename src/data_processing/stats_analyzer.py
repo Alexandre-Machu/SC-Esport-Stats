@@ -32,6 +32,8 @@ class StatsAnalyzer:
                 "tags": ["TSC Dert"]
             }
         }
+        # Charger les données lors de l'initialisation
+        self.matches = self.load_data()
 
     def parse_filename(self, filename: str) -> Dict:
         """Parse un nom de fichier pour extraire les informations de la partie."""
@@ -117,21 +119,23 @@ class StatsAnalyzer:
                 games.append(game_data)
         return games
 
-    def get_global_stats(self, filter_type: str = None) -> Dict:
-        games = self.load_data()
+    def get_global_stats(self, game_type: str = "Global"):
+        # Filtrer les matches selon le type
+        if game_type == "Global":
+            filtered_matches = self.matches
+        elif game_type == "Scrim":
+            filtered_matches = [m for m in self.matches if m['type_partie'] == 'Scrim']
+        elif game_type == "Tournoi":
+            filtered_matches = [m for m in self.matches if m['type_partie'] == 'Tournoi']
         
-        # Filtrer les parties selon le type si nécessaire
-        if filter_type:
-            games = [game for game in games if game['type_partie'] == filter_type]
-        
-        total_games = len(games)
+        total_games = len(filtered_matches)
         wins = 0
         blue_side_games = 0
         blue_side_wins = 0
         red_side_games = 0
         red_side_wins = 0
 
-        for game in games:
+        for game in filtered_matches:
             for participant in game['participants']:
                 if participant['RIOT_ID_GAME_NAME'].startswith('TSC'):
                     team = participant['TEAM']
@@ -151,7 +155,7 @@ class StatsAnalyzer:
 
         # Ajouter la collecte des stats des champions
         champion_stats = {}
-        for game in games:
+        for game in filtered_matches:
             for player in game['participants']:
                 champion = player.get('SKIN')
                 if champion:
@@ -175,15 +179,16 @@ class StatsAnalyzer:
             'champion_stats': champion_stats
         }
 
-    def get_player_stats(self, player_name: str, filter_type: str = None) -> Dict:
-        games = self.load_data()
-        player_tags = self.players[player_name]["tags"]
-        
-        # Filter by game type if specified
-        if filter_type:
-            games = [game for game in games if game['type_partie'] == filter_type]
+    def get_player_stats(self, player_name: str, game_type: str = "Global"):
+        # Filtrer les matches selon le type
+        if game_type == "Global":
+            filtered_matches = self.matches
+        elif game_type == "Scrim":
+            filtered_matches = [m for m in self.matches if m['type_partie'] == 'Scrim']
+        elif game_type == "Tournoi":
+            filtered_matches = [m for m in self.matches if m['type_partie'] == 'Tournoi']
     
-        # Player's match history
+        player_tags = self.players[player_name]["tags"]
         match_history = []
         total_kills = 0
         total_deaths = 0
@@ -192,22 +197,22 @@ class StatsAnalyzer:
         total_vision = 0
         game_duration_minutes = 0
         
-        for game in games:
+        for game in filtered_matches:  # Utilise filtered_matches au lieu de self.matches
             for participant in game['participants']:
                 if any(tag in participant['RIOT_ID_GAME_NAME'] for tag in player_tags):
                     match_info = {
                         'SKIN': participant['SKIN'],
                         'Win': participant['WIN'],
                         'KDA': f"{participant['CHAMPIONS_KILLED']}/{participant['NUM_DEATHS']}/{participant['ASSISTS']}",
-                        'CHAMPIONS_KILLED': participant['CHAMPIONS_KILLED'],  # Ajout explicite des colonnes
-                        'NUM_DEATHS': participant['NUM_DEATHS'],             # qui sont dans le JSON
-                        'ASSISTS': participant['ASSISTS'],                   #
+                        'CHAMPIONS_KILLED': participant['CHAMPIONS_KILLED'],
+                        'NUM_DEATHS': participant['NUM_DEATHS'],
+                        'ASSISTS': participant['ASSISTS'],
                         'date': game['date'],
                         'type_partie': game['type_partie'],
                         'equipe_adverse': game['equipe_adverse'],
                         'MINIONS_KILLED': participant['MINIONS_KILLED'],
                         'VISION_SCORE': participant['VISION_SCORE'],
-                        'gameDuration': game['gameDuration']  # Ajout de la durée de la partie
+                        'gameDuration': game['gameDuration']
                     }
                     
                     # Add tournament specific info if applicable
@@ -216,22 +221,22 @@ class StatsAnalyzer:
                             'nom_tournoi': game['nom_tournoi'],
                             'game_tournoi': game['game_tournoi']
                         })
-                    
+                
                     match_info['numero_game'] = game['numero_game']
                     match_history.append(match_info)
-                    
+                
                     # Update totals
                     total_kills += int(participant['CHAMPIONS_KILLED'])
                     total_deaths += int(participant['NUM_DEATHS'])
                     total_assists += int(participant['ASSISTS'])
                     total_cs += int(participant['MINIONS_KILLED'])
                     total_vision += int(participant.get('VISION_SCORE', 0))
-                    game_duration_minutes += float(game['gameDuration']) / 60
-                    
+                    game_duration_minutes += float(game['gameDuration']) / 60000  # Correction: divisé par 60000 pour convertir ms en minutes
+                
                     break
     
         total_games = len(match_history)
-        
+    
         return {
             'total_games': total_games,
             'kda': (total_kills + total_assists) / total_deaths if total_deaths > 0 else (total_kills + total_assists),

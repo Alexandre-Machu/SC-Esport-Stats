@@ -24,7 +24,7 @@ def get_champion_icon_url(champion_name: str) -> str:
 
 def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
     # Récupération des stats
-    stats = analyzer.get_player_stats(player_name)
+    stats = analyzer.get_player_stats(player_name, game_type)  # Ajout du paramètre game_type ici
     
     # Ajout du style CSS spécifique
     st.markdown("""
