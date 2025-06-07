@@ -6,17 +6,16 @@ from components.player_stats_display import display_player_stats
 from data_processing.stats_analyzer import StatsAnalyzer
 
 def main():
+    st.set_page_config(page_title="SC-Esport-Stats", layout="wide")
+    
+    # Initialize the analyzer
+    analyzer = StatsAnalyzer("data/")
+
     # Initialize session state for navigation
     if 'current_page' not in st.session_state:
         st.session_state.current_page = 'global'
     if 'selected_role' not in st.session_state:
         st.session_state.selected_role = 'TOP'  # Sélection par défaut
-
-    st.set_page_config(
-        page_title="SC Esport Stats",
-        page_icon="🎮",
-        layout="wide"
-    )
 
     # CSS pour customiser la navbar
     st.markdown("""
@@ -83,12 +82,6 @@ def main():
     
     st.divider()
 
-    # Define data path
-    data_path = os.path.join(os.path.dirname(__file__), "..", "data")
-    
-    # Initialize analyzer
-    analyzer = StatsAnalyzer(data_path=data_path)
-    
     # Gestion de la navigation
     if st.session_state.current_page == 'player':
         st.header("Statistiques par joueur")
@@ -134,8 +127,8 @@ def main():
             }
             display_player_stats(analyzer, role_to_player[st.session_state.selected_role])
     else:
-        stats = analyzer.get_global_stats()
-        display_global_stats(stats)
+        st.title("Statistiques Globales")
+        display_global_stats(analyzer)  # Pass the analyzer object, not stats dictionary
 
 def get_image_as_base64(image_path):
     import base64

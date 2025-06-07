@@ -1,6 +1,21 @@
 import streamlit as st
 
-def display_global_stats(stats: dict):
+def display_global_stats(analyzer):
+    # Selector for game type
+    game_type = st.selectbox(
+        "Type de parties",
+        ["Global", "Scrims", "Tournois"],
+        key="global_stats_type"
+    )
+    
+    # Get filtered stats based on selection
+    if game_type == "Scrims":
+        stats = analyzer.get_global_stats(filter_type="Scrim")
+    elif game_type == "Tournois":
+        stats = analyzer.get_global_stats(filter_type="Tournoi")
+    else:
+        stats = analyzer.get_global_stats()
+    
     st.header("Statistiques générales")
     
     col1, col2, col3, col4 = st.columns(4)

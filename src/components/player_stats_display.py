@@ -23,12 +23,30 @@ def get_champion_icon_url(champion_name: str) -> str:
     return f"https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/{formatted_name}.png"
 
 def display_player_stats(analyzer, player_name: str):
-    stats = analyzer.get_player_stats(player_name)
+    # Sélecteur de type de parties
+    game_type = st.selectbox(
+        "Type de parties",
+        ["Global", "Scrims", "Tournois"],
+        key="player_stats_type"
+    )
     
+    # Obtenir les stats filtrées
+    if game_type == "Scrims":
+        stats = analyzer.get_player_stats(player_name, filter_type="Scrim")
+    elif game_type == "Tournois":
+        stats = analyzer.get_player_stats(player_name, filter_type="Tournoi")
+    else:
+        stats = analyzer.get_player_stats(player_name)
+        
     if stats['total_games'] == 0:
         st.warning(f"Aucune partie trouvée pour {player_name}")
         return
-        
+
+    # Debug - Raw match history data:
+    print("Debug - Raw match history data:")
+    for key in stats['match_history'][0].keys():
+        print(f"- {key}")
+
     # Stats générales (première ligne)
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
@@ -40,160 +58,182 @@ def display_player_stats(analyzer, player_name: str):
     with col4:
         st.metric("Assists Moyen", f"{stats['avg_assists']:.1f}")
     with col5:
-        st.metric("CS/min Moyen", f"{stats['avg_cspm']:.1f}")
-    
-    # Champions les plus joués avec distinction victoires/défaites
+        st.metric("Vision Score Moyen", f"{stats['avg_vision']:.1f}")
+
+    # Champion Statistics Graph
     st.subheader("Champions les plus joués")
-    
-    champion_stats = {}
-    for game in stats['match_history']:
-        champion = format_champion_name(game['SKIN'])
-        is_win = game['Win'] == 'Win'
+    if stats['match_history']:
+        history_df = pd.DataFrame(stats['match_history'])
         
-        if champion not in champion_stats:
-            champion_stats[champion] = {'Victoires': 0, 'Défaites': 0}
+        # Count games and wins per champion
+        champion_stats = {}
+        for _, row in history_df.iterrows():
+            champ = row['SKIN']
+            result = row['Win']
+            if champ not in champion_stats:
+                champion_stats[champ] = {'total': 0, 'wins': 0}
+            champion_stats[champ]['total'] += 1
+            if result == 'Win':
+                champion_stats[champ]['wins'] += 1
         
-        if is_win:
-            champion_stats[champion]['Victoires'] += 1
-        else:
-            champion_stats[champion]['Défaites'] += 1
-
-    champions_df = pd.DataFrame.from_dict(champion_stats, orient='index')
-    champions_df = champions_df.fillna(0)
-    champions_df = champions_df.sort_values(by=['Victoires', 'Défaites'], ascending=False)
-
-    fig = go.Figure(data=[
-        go.Bar(
-            name='Victoires', 
-            x=champions_df.index,  # Utilisation simple du nom du champion
-            y=champions_df['Victoires'], 
-            marker_color='#2ECC71'
-        ),
-        go.Bar(
-            name='Défaites', 
-            x=champions_df.index,  # Utilisation simple du nom du champion
-            y=champions_df['Défaites'], 
-            marker_color='#E74C3C'
-        )
-    ])
-
-    fig.update_layout(
-        barmode='stack',
-        title="Nombre de games par champion (Victoires vs Défaites)",
-        xaxis_title="Champion",
-        yaxis_title="Nombre de games",
-        height=400,
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font=dict(color='white'),
-        showlegend=True,
-        xaxis=dict(tickangle=0)
-    )
-    
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(128,128,128,0.2)')
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Historique des parties avec icônes
-    st.subheader("Historique des parties")
-    history_df = pd.DataFrame(stats['match_history'])
-    
-    # Conversion de la date pour le tri
-    history_df['date'] = pd.to_datetime(history_df['date'], format='%d/%m/%Y')
-    
-    # Tri par date puis par numéro de game
-    history_df['game_number'] = history_df['numero_game'].str.extract('(\d+)').astype(int)
-    history_df = history_df.sort_values(['date', 'game_number'], ascending=[False, True])
-    history_df = history_df.drop('game_number', axis=1)  # On supprime la colonne temporaire
-    
-    # Conversion de la date pour l'affichage
-    history_df['date'] = history_df['date'].dt.strftime('%d/%m/%Y')
-    
-    # Formatage des champions et ajout des icônes
-    history_df['SKIN'] = history_df['SKIN'].apply(format_champion_name)
-    history_df['Champion_Icon'] = history_df['SKIN'].apply(
-        lambda x: f'<img src="{get_champion_icon_url(x)}" width="30" height="30" style="vertical-align:middle"> {x}'
-    )
-    
-    history_df['Durée Game'] = history_df['gameDuration'].apply(lambda x: f"{int(x/60)}:{int(x%60):02d}")
-    
-    # Calcul des KDA et CS/min
-    history_df['KDA'] = history_df.apply(
-        lambda row: (row['CHAMPIONS_KILLED'] + row['ASSISTS']) / max(1, row['NUM_DEATHS']),
-        axis=1
-    )
-    
-    history_df['CS/min'] = history_df.apply(
-        lambda row: row['Missions_CreepScore'] / (row['gameDuration']/60),
-        axis=1
-    )
-    
-    # Remplacer "Fail" par "Lose"
-    history_df['Win'] = history_df['Win'].map({'Win': 'Win', 'Fail': 'Lose'})
-    
-    # Ajout des emojis pour Win/Lose et Type de partie
-    history_df['Win'] = history_df['Win'].map({
-        'Win': '✅ Win',
-        'Lose': '❌ Lose'
-    })
-    
-    history_df['type_partie'] = history_df['type_partie'].map({
-        'Scrim': '⚔️ Scrim',
-        'Tournoi': '🛡️ Tournoi'
-    })
-    
-    columns_to_display = {
-        'date': 'Date',
-        'Champion_Icon': 'Champion',
-        'Win': 'W/L',
-        'type_partie': 'Type',
-        'equipe_adverse': 'VS',
-        'numero_game': 'Game',
-        'Durée Game': 'Durée',
-        'KDA': 'KDA',
-        'CHAMPIONS_KILLED': 'Kills',
-        'NUM_DEATHS': 'Deaths',
-        'ASSISTS': 'Assists',
-        'CS/min': 'CS/min',
-        'VISION_SCORE': 'Vision Score'
-    }
-    
-    # Ajout d'une colonne pour grouper les matchs par adversaire et date
-    history_df['match_group'] = history_df['date'] + history_df['equipe_adverse']
-    
-    # Formatage du tableau
-    st.markdown(
-        history_df[columns_to_display.keys()]
-        .rename(columns=columns_to_display)
-        .style.format({
-            'KDA': '{:.2f}',
-            'CS/min': '{:.1f}',
-            'Vision Score': '{:.0f}'
-        })
-        .set_table_styles([
-            {'selector': 'thead', 'props': [('background-color', '#1e1e1e'), ('color', 'white')]},
-            # Bordure fine entre chaque ligne
-            {'selector': 'tr', 'props': 'border-bottom: 1px solid rgba(128,128,128,0.2)'},
-            # Bordure épaisse entre les différents groupes de scrims
-            {'selector': 'tr:has(td:contains("Game 1"))', 'props': 'border-top: 10px solid rgba(128,128,128,0.8) !important'},
-            # Style pour les index
-            {'selector': '.row_heading', 'props': [('background-color', '#1e1e1e'), ('color', 'white')]},
+        # Create lists for the graph
+        champions = list(champion_stats.keys())
+        wins = [champion_stats[c]['wins'] for c in champions]
+        losses = [champion_stats[c]['total'] - champion_stats[c]['wins'] for c in champions]
+        
+        # Sort by total games
+        sorted_indices = sorted(range(len(champions)), 
+                             key=lambda i: champion_stats[champions[i]]['total'], 
+                             reverse=True)
+        champions = [champions[i] for i in sorted_indices]
+        wins = [wins[i] for i in sorted_indices]
+        losses = [losses[i] for i in sorted_indices]
+        
+        # Create stacked bar chart
+        fig = go.Figure(data=[
+            go.Bar(name='Victoires', x=champions, y=wins, marker_color='#2ECC71'),
+            go.Bar(name='Défaites', x=champions, y=losses, marker_color='#E74C3C')
         ])
-        .to_html(escape=False),
-        unsafe_allow_html=True
-    )
+        
+        fig.update_layout(
+            barmode='stack',
+            title="Nombre de games par champion (Victoires vs Défaites)",
+            xaxis_title="Champions",
+            yaxis_title="Nombre de games",
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+
+    # Match History Table
+    st.subheader("Historique des parties")
+    if stats['match_history']:
+        df = pd.DataFrame(stats['match_history'])
+        
+        # Debug: Print available columns
+        print("Available columns:", df.columns.tolist())
+        
+        # Format date
+        df['date'] = pd.to_datetime(df['date'], format='%d%m%Y')
+        
+        # Sort by date (descending) and game number
+        df['game_number'] = df['numero_game'].str.extract('(\d+)').astype(int)
+        df = df.sort_values(['date', 'game_number'], ascending=[False, True])
+        
+        # Format date for display
+        df['date'] = df['date'].dt.strftime('%d/%m/%Y')
+        
+        # Calculate CS/min
+        df['CS/min'] = df['MINIONS_KILLED'].astype(float) / (df['gameDuration'].astype(float) / 60000)
+        
+        # Add champion icons
+        df['Champion_Icon'] = df['SKIN'].apply(
+            lambda x: f'<img src="{get_champion_icon_url(x)}" width="30" height="30" style="vertical-align:middle"> {x}'
+        )
+        
+        # Add these calculations before creating display_df
+        df['Kills'] = df['KDA'].str.split('/').str[0].astype(int)
+        df['Deaths'] = df['KDA'].str.split('/').str[1].astype(int)
+        df['Assists'] = df['KDA'].str.split('/').str[2].astype(int)
+
+        # Create and display table
+        columns_to_display = [
+            'date',
+            'Champion_Icon',
+            'Win',
+            'type_partie',
+            'equipe_adverse',
+            'numero_game',
+            'gameDuration',
+            'KDA',
+            'CHAMPIONS_KILLED',
+            'NUM_DEATHS',
+            'ASSISTS',
+            'CS/min',
+            'VISION_SCORE'
+        ]
+
+        # Add tournament name column only for tournament games
+        if game_type == "Tournois" or game_type == "Global":
+            columns_to_display.insert(4, 'nom_tournoi')  # Insert after type_partie
+
+        display_df = df[columns_to_display].rename(columns={
+            'date': 'Date',
+            'Champion_Icon': 'Champion',
+            'Win': 'W/L',
+            'type_partie': 'Type',
+            'equipe_adverse': 'VS',
+            'numero_game': 'Game',
+            'gameDuration': 'Durée',
+            'KDA': 'KDA',
+            'CHAMPIONS_KILLED': 'Kills',
+            'NUM_DEATHS': 'Deaths',
+            'ASSISTS': 'Assists',
+            'CS/min': 'CS/min',
+            'VISION_SCORE': 'Vision Score'
+        })
+
+        if game_type == "Tournois" or game_type == "Global":
+            display_df = display_df.rename(columns={'nom_tournoi': 'Tournoi'})
+
+        # Format the duration from milliseconds to mm:ss
+        display_df['Durée'] = pd.to_numeric(display_df['Durée']).apply(
+            lambda x: f"{int(x/60000):02d}:{int((x%60000)/1000):02d}"
+        )
+
+        # Format the Win/Loss column with emojis
+        display_df['W/L'] = display_df['W/L'].apply(lambda x: "✅ Win" if x == "Win" else "❌ Lose")
+        
+        # Format the Type column with emojis
+        display_df['Type'] = display_df['Type'].map({
+            'Scrim': '⚔️ Scrim',
+            'Tournoi': '🛡️ Tournoi'
+        })
+
+        # Avant le formatage, convertissons les colonnes en nombres
+        display_df['KDA'] = pd.to_numeric(display_df['KDA'].str.split('/').apply(
+            lambda x: (int(x[0]) + int(x[2])) / max(1, int(x[1]))
+        ))
+        display_df['CS/min'] = pd.to_numeric(display_df['CS/min'])
+        display_df['Vision Score'] = pd.to_numeric(display_df['Vision Score'])
+
+        # Maintenant le formatage fonctionnera
+        st.markdown(
+            display_df.style.format({
+                'KDA': '{:.2f}',
+                'CS/min': '{:.1f}',
+                'Vision Score': '{:.0f}'
+            })
+            .set_table_styles([
+                {'selector': 'thead', 'props': [('background-color', '#1e1e1e'), ('color', 'white')]},
+                {'selector': 'tr', 'props': 'border-bottom: 1px solid rgba(128,128,128,0.2)'},
+                {'selector': 'tr:has(td:contains("Game 1"))', 'props': 'border-top: 10px solid rgba(128,128,128,0.8) !important'},
+            ])
+            .to_html(escape=False),
+            unsafe_allow_html=True
+        )
+
+        # Add CSS for visual separation
+        st.markdown("""
+            <style>
+            .dataframe tr td { padding: 0.5rem; }
+            .dataframe tr:has(td:contains("Game 1")) { 
+                padding-top: 1.5rem !important;
+                margin-top: 1.5rem !important;
+            }
+            .dataframe tbody tr:has(td:contains("Game 1")) td {
+                border-top: 8px solid rgba(128,128,128,0.3) !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+    else:
+        st.info("Aucun historique de parties disponible")
     
-    # CSS personnalisé pour améliorer la séparation visuelle
-    st.markdown("""
-        <style>
-        .dataframe tr td { padding: 0.5rem; }
-        .dataframe tr:has(td:contains("Game 1")) { 
-            padding-top: 1.5rem !important;
-            margin-top: 1.5rem !important;
-        }
-        .dataframe tbody tr:has(td:contains("Game 1")) td {
-            border-top: 8px solid rgba(128,128,128,0.3) !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # Après la création du DataFrame
+    print("Debug - DataFrame columns:")
+    print(df.columns.tolist())
+    print("\nDebug - First row sample:")
+    print(df.iloc[0])

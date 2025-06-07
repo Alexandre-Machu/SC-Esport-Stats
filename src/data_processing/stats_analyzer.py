@@ -1,5 +1,6 @@
 import json
 import os
+import glob
 from typing import Dict, List
 
 class StatsAnalyzer:
@@ -90,18 +91,39 @@ class StatsAnalyzer:
             }
 
     def load_data(self) -> List[Dict]:
-        all_games = []
-        for filename in os.listdir(self.data_path):
-            if filename.endswith('.json'):
-                with open(os.path.join(self.data_path, filename), 'r') as f:
-                    game_data = json.load(f)
-                    # Ajouter les informations du filename au game_data
-                    game_data['file_info'] = self.parse_filename(filename)
-                    all_games.append(game_data)
-        return all_games
+        games = []
+        for file in glob.glob(os.path.join(self.data_path, "*.json")):
+            with open(file, 'r', encoding='utf-8') as f:
+                game_data = json.load(f)
+                
+                # Parse filename to extract metadata
+                filename = os.path.basename(file)
+                parts = filename.split('_')
+                
+                game_data['id_partie'] = parts[0]
+                game_data['date'] = parts[1]
+                game_data['type_partie'] = parts[2]
+                
+                if parts[2] == 'Tournoi':
+                    game_data['nom_tournoi'] = parts[3]
+                    game_data['equipe_adverse'] = parts[4]
+                    game_data['game_tournoi'] = parts[5]  # GT1, GT2, etc.
+                    game_data['numero_game'] = parts[6].replace('Game', '').split('.')[0]  # Remove .json
+                else:  # Scrim
+                    game_data['equipe_adverse'] = parts[3]
+                    game_data['numero_game'] = parts[4].replace('Game', '').split('.')[0]
+                    game_data['game_tournoi'] = None
+                
+                games.append(game_data)
+        return games
 
-    def get_global_stats(self) -> Dict:
+    def get_global_stats(self, filter_type: str = None) -> Dict:
         games = self.load_data()
+        
+        # Filtrer les parties selon le type si nécessaire
+        if filter_type:
+            games = [game for game in games if game['type_partie'] == filter_type]
+        
         total_games = len(games)
         wins = 0
         blue_side_games = 0
@@ -140,86 +162,70 @@ class StatsAnalyzer:
             'red_side_winrate': (red_side_wins / red_side_games) * 100 if red_side_games > 0 else 0
         }
 
-    def get_player_stats(self, player_name: str) -> Dict:
+    def get_player_stats(self, player_name: str, filter_type: str = None) -> Dict:
         games = self.load_data()
         player_tags = self.players[player_name]["tags"]
         
-        # Ajout de logs pour debug
-        print(f"Recherche des parties pour {player_name} avec les tags: {player_tags}")
-        
-        total_games = 0
-        kills = 0
-        deaths = 0
-        assists = 0
-        total_cspm = 0
-        total_vision_score = 0
-        champions_played = {}
+        # Filter by game type if specified
+        if filter_type:
+            games = [game for game in games if game['type_partie'] == filter_type]
+    
+        # Player's match history
         match_history = []
+        total_kills = 0
+        total_deaths = 0
+        total_assists = 0
+        total_cs = 0
+        total_vision = 0
+        game_duration_minutes = 0
         
         for game in games:
             for participant in game['participants']:
-                participant_name = participant.get('RIOT_ID_GAME_NAME', '').split('#')[0]  # On retire le #EUW si présent
-                if participant_name in player_tags:
-                    print(f"Partie trouvée: {participant_name}")
-                    total_games += 1
-                    game_duration = int(participant['TIME_PLAYED'])
-                    
-                    # Stats de base
-                    k = int(participant['CHAMPIONS_KILLED'])
-                    d = int(participant['NUM_DEATHS'])
-                    a = int(participant['ASSISTS'])
-                    cs = int(participant['Missions_CreepScore'])
-                    
-                    kills += k
-                    deaths += d
-                    assists += a
-                    total_cspm += cs / (game_duration/60)
-                    total_vision_score += int(participant['VISION_SCORE'])
-                    
-                    # Track champion usage
-                    champion = participant['SKIN']
-                    champions_played[champion] = champions_played.get(champion, 0) + 1
-                    
-                    # Add to match history
-                    match_history.append({
-                        'SKIN': champion,
+                if any(tag in participant['RIOT_ID_GAME_NAME'] for tag in player_tags):
+                    match_info = {
+                        'SKIN': participant['SKIN'],
                         'Win': participant['WIN'],
-                        'gameDuration': game_duration,
-                        'CHAMPIONS_KILLED': k,
-                        'NUM_DEATHS': d,
-                        'ASSISTS': a,
-                        'Missions_CreepScore': cs,
-                        'VISION_SCORE': int(participant['VISION_SCORE']),
-                        'date': game['file_info']['date'],
-                        'type_partie': game['file_info']['type_partie'],
-                        'equipe_adverse': game['file_info']['equipe_adverse'],
-                        'numero_game': game['file_info']['numero_game'],
-                        'numero_match': game['file_info']['numero_match']
-                    })
+                        'KDA': f"{participant['CHAMPIONS_KILLED']}/{participant['NUM_DEATHS']}/{participant['ASSISTS']}",
+                        'CHAMPIONS_KILLED': participant['CHAMPIONS_KILLED'],  # Ajout explicite des colonnes
+                        'NUM_DEATHS': participant['NUM_DEATHS'],             # qui sont dans le JSON
+                        'ASSISTS': participant['ASSISTS'],                   #
+                        'date': game['date'],
+                        'type_partie': game['type_partie'],
+                        'equipe_adverse': game['equipe_adverse'],
+                        'MINIONS_KILLED': participant['MINIONS_KILLED'],
+                        'VISION_SCORE': participant['VISION_SCORE'],
+                        'gameDuration': game['gameDuration']  # Ajout de la durée de la partie
+                    }
+                    
+                    # Add tournament specific info if applicable
+                    if game['type_partie'] == 'Tournoi':
+                        match_info.update({
+                            'nom_tournoi': game['nom_tournoi'],
+                            'game_tournoi': game['game_tournoi']
+                        })
+                    
+                    match_info['numero_game'] = game['numero_game']
+                    match_history.append(match_info)
+                    
+                    # Update totals
+                    total_kills += int(participant['CHAMPIONS_KILLED'])
+                    total_deaths += int(participant['NUM_DEATHS'])
+                    total_assists += int(participant['ASSISTS'])
+                    total_cs += int(participant['MINIONS_KILLED'])
+                    total_vision += int(participant.get('VISION_SCORE', 0))
+                    game_duration_minutes += float(game['gameDuration']) / 60
+                    
+                    break
+    
+        total_games = len(match_history)
         
-        # Gestion du cas où aucune partie n'est trouvée
-        if total_games == 0:
-            return {
-                'total_games': 0,
-                'avg_kills': 0,
-                'avg_deaths': 0,
-                'avg_assists': 0,
-                'kda': 0,
-                'avg_cspm': 0,
-                'avg_vision_score': 0,
-                'champions': {},
-                'match_history': []
-            }
-
-        # Calcul des moyennes si des parties sont trouvées
         return {
             'total_games': total_games,
-            'avg_kills': kills / total_games,
-            'avg_deaths': deaths / total_games,
-            'avg_assists': assists / total_games,
-            'kda': ((kills + assists) / max(1, deaths)),
-            'avg_cspm': total_cspm / total_games,
-            'avg_vision_score': total_vision_score / total_games,
-            'champions': champions_played,
+            'kda': (total_kills + total_assists) / total_deaths if total_deaths > 0 else (total_kills + total_assists),
+            'avg_kills': total_kills / total_games if total_games > 0 else 0,
+            'avg_deaths': total_deaths / total_games if total_games > 0 else 0,
+            'avg_assists': total_assists / total_games if total_games > 0 else 0,
+            'avg_cspm': (total_cs / game_duration_minutes) if game_duration_minutes > 0 else 0,
+            'avg_vision': total_vision / total_games if total_games > 0 else 0,
             'match_history': match_history
         }
