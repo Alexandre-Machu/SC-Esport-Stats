@@ -208,7 +208,7 @@ def display_player_stats(analyzer, player_name: str):
         # Remplacer les fonctions de conversion et leur application par:
 
         def safe_numeric_conversion(value, default=0.0):
-            if pd.isna(value) or value == '':
+            if pd.isna(value) or value == '' or value is None:
                 return default
             try:
                 return float(value)
@@ -222,21 +222,27 @@ def display_player_stats(analyzer, player_name: str):
                 parts = kda_string.split('/')
                 if len(parts) != 3:
                     return 0.0
-                k = float(parts[0]) if parts[0] else 0
-                d = float(parts[1]) if parts[1] else 1
-                a = float(parts[2]) if parts[2] else 0
-                return (k + a) / max(1, d)
+                k = safe_numeric_conversion(parts[0])
+                d = safe_numeric_conversion(parts[1], 1.0)  # default to 1 to avoid division by zero
+                a = safe_numeric_conversion(parts[2])
+                return (k + a) / max(1.0, d)
             except (ValueError, AttributeError, TypeError, ZeroDivisionError):
                 return 0.0
 
-        # Avant de créer le style et d'afficher le DataFrame
+        # Convert numeric columns safely
         display_df['KDA'] = display_df['KDA'].apply(safe_kda_calculation)
-        display_df['CS/min'] = display_df['CS/min'].fillna(0.0).astype(float)
-        display_df['Vision Score'] = display_df['Vision Score'].fillna(0.0).astype(float)
+        display_df['CS/min'] = display_df['CS/min'].apply(safe_numeric_conversion)
+        display_df['Vision Score'] = display_df['Vision Score'].apply(safe_numeric_conversion)
 
-        # Puis formater l'affichage
+        # Create new DataFrame with only the processed columns
+        display_df_clean = display_df.copy()
+        display_df_clean['KDA'] = display_df_clean['KDA'].astype(float)
+        display_df_clean['CS/min'] = display_df_clean['CS/min'].astype(float)
+        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].astype(float)
+
+        # Format and display
         st.markdown(
-            display_df.style.format({
+            display_df_clean.style.format({
                 'KDA': '{:.2f}',
                 'CS/min': '{:.1f}',
                 'Vision Score': '{:.0f}'
