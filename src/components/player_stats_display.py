@@ -205,27 +205,36 @@ def display_player_stats(analyzer, player_name: str):
             'Tournoi': '🛡️ Tournoi'
         })
 
-        # Calculer le KDA
-        def safe_kda_calculation(kda_string):
-            try:
-                k, d, a = [int(x) if x else 0 for x in kda_string.split('/')]
-                return (k + a) / max(1, d)
-            except (ValueError, AttributeError, TypeError):
-                return 0
+        # Remplacer les fonctions de conversion et leur application par:
 
-        # Conversion sécurisée des colonnes numériques
-        def safe_numeric_conversion(value):
+        def safe_numeric_conversion(value, default=0.0):
+            if pd.isna(value) or value == '':
+                return default
             try:
-                return float(value) if pd.notnull(value) else 0.0
+                return float(value)
             except (ValueError, TypeError):
+                return default
+
+        def safe_kda_calculation(kda_string):
+            if pd.isna(kda_string) or not isinstance(kda_string, str):
+                return 0.0
+            try:
+                parts = kda_string.split('/')
+                if len(parts) != 3:
+                    return 0.0
+                k = float(parts[0]) if parts[0] else 0
+                d = float(parts[1]) if parts[1] else 1
+                a = float(parts[2]) if parts[2] else 0
+                return (k + a) / max(1, d)
+            except (ValueError, AttributeError, TypeError, ZeroDivisionError):
                 return 0.0
 
-        # Application des conversions sécurisées
+        # Avant de créer le style et d'afficher le DataFrame
         display_df['KDA'] = display_df['KDA'].apply(safe_kda_calculation)
-        display_df['CS/min'] = display_df['CS/min'].apply(safe_numeric_conversion)
-        display_df['Vision Score'] = display_df['Vision Score'].apply(safe_numeric_conversion)
+        display_df['CS/min'] = display_df['CS/min'].fillna(0.0).astype(float)
+        display_df['Vision Score'] = display_df['Vision Score'].fillna(0.0).astype(float)
 
-        # Maintenant le formatage
+        # Puis formater l'affichage
         st.markdown(
             display_df.style.format({
                 'KDA': '{:.2f}',
