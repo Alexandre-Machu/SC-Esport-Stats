@@ -237,16 +237,24 @@ def display_player_stats(analyzer, player_name: str):
 
         # Conversion directe des colonnes
         display_df_clean = display_df.copy()
-        display_df_clean['KDA'] = display_df_clean['KDA'].apply(safe_kda_calculation)
-        display_df_clean['CS/min'] = display_df_clean['CS/min'].apply(safe_numeric_conversion)
-        display_df_clean['Vision Score'] = display_df_clean['Vision Score'].apply(safe_numeric_conversion)
 
-        # Affichage sans conversion de type supplémentaire
+        # Test avec des valeurs en dur
+        display_df_clean['KDA'] = 3.5  # Valeur de test fixe
+        display_df_clean['CS/min'] = 8.2  # Valeur de test fixe
+        display_df_clean['Vision Score'] = 45  # Valeur de test fixe
+        display_df_clean['Kills'] = 5  # Valeur de test fixe
+        display_df_clean['Deaths'] = 2  # Valeur de test fixe
+        display_df_clean['Assists'] = 7  # Valeur de test fixe
+
+        # Affichage avec les valeurs en dur
         st.markdown(
             display_df_clean.style.format({
                 'KDA': '{:.2f}',
                 'CS/min': '{:.1f}',
-                'Vision Score': '{:.0f}'
+                'Vision Score': '{:.0f}',
+                'Kills': '{:d}',
+                'Deaths': '{:d}',
+                'Assists': '{:d}'
             })
             .set_table_styles([
                 {'selector': 'thead', 'props': [('background-color', '#1e1e1e'), ('color', 'white')]},
