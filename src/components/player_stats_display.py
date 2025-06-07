@@ -22,46 +22,75 @@ def get_champion_icon_url(champion_name: str) -> str:
         formatted_name = "MonkeyKing"
     return f"https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/{formatted_name}.png"
 
-def display_player_stats(analyzer, player_name: str):
-    # Sélecteur de type de parties
-    game_type = st.selectbox(
-        "Type de parties",
-        ["Global", "Scrims", "Tournois"],
-        key="player_stats_type",
-        disabled=False,  # Mettre à True si vous voulez désactiver complètement
-        label_visibility="visible",
-        help="Filtrer l'affichage par type de parties"
-    )
+def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
+    # Récupération des stats
+    stats = analyzer.get_player_stats(player_name)
     
-    # Obtenir les stats filtrées
-    if game_type == "Scrims":
-        stats = analyzer.get_player_stats(player_name, filter_type="Scrim")
-    elif game_type == "Tournois":
-        stats = analyzer.get_player_stats(player_name, filter_type="Tournoi")
-    else:
-        stats = analyzer.get_player_stats(player_name)
-        
-    if stats['total_games'] == 0:
-        st.warning(f"Aucune partie trouvée pour {player_name}")
-        return
+    # Ajout du style CSS spécifique
+    st.markdown("""
+        <style>
+        .player-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .player-stat-card {
+            background: rgba(30, 30, 40, 0.6);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-label {
+            color: #8890A0;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            color: #ffffff;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        .stat-subtext {
+            color: #8890A0;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Debug - Raw match history data:
-    print("Debug - Raw match history data:")
-    for key in stats['match_history'][0].keys():
-        print(f"- {key}")
-
-    # Stats générales (première ligne)
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("KDA Moyen", f"{stats['kda']:.2f}")
-    with col2:
-        st.metric("Kills Moyen", f"{stats['avg_kills']:.1f}")
-    with col3:
-        st.metric("Deaths Moyen", f"{stats['avg_deaths']:.1f}")
-    with col4:
-        st.metric("Assists Moyen", f"{stats['avg_assists']:.1f}")
-    with col5:
-        st.metric("Vision Score Moyen", f"{stats['avg_vision']:.1f}")
+    # Affichage des stats principales
+    stats_html = f"""
+    <div class="player-stats-grid">
+        <div class="player-stat-card">
+            <div class="stat-label">KDA</div>
+            <div class="stat-value">{stats['kda']:.2f}</div>
+            <div class="stat-subtext">{stats['avg_kills']:.1f}/{stats['avg_deaths']:.1f}/{stats['avg_assists']:.1f}</div>
+        </div>
+        <div class="player-stat-card">
+            <div class="stat-label">Kills Moyen</div>
+            <div class="stat-value">{stats['avg_kills']:.1f}</div>
+            <div class="stat-subtext">par partie</div>
+        </div>
+        <div class="player-stat-card">
+            <div class="stat-label">Deaths Moyen</div>
+            <div class="stat-value">{stats['avg_deaths']:.1f}</div>
+            <div class="stat-subtext">par partie</div>
+        </div>
+        <div class="player-stat-card">
+            <div class="stat-label">Assists Moyen</div>
+            <div class="stat-value">{stats['avg_assists']:.1f}</div>
+            <div class="stat-subtext">par partie</div>
+        </div>
+        <div class="player-stat-card">
+            <div class="stat-label">Vision Score</div>
+            <div class="stat-value">{stats['avg_vision']:.1f}</div>
+            <div class="stat-subtext">par partie</div>
+        </div>
+    </div>
+    """
+    st.markdown(stats_html, unsafe_allow_html=True)
 
     # Champion Statistics Graph
     st.subheader("Champions les plus joués")
@@ -175,8 +204,8 @@ def display_player_stats(analyzer, player_name: str):
             'VISION_SCORE'
         ]
 
-        # Add tournament name column ONLY for tournament games (not for Global view)
-        if game_type == "Tournois":  # Removed Global from this condition
+        # Add tournament name column based on game_type
+        if game_type in ["Tournois", "Global"]:
             columns_to_display.insert(4, 'nom_tournoi')
 
         display_df = df[columns_to_display].rename(columns={
@@ -195,8 +224,8 @@ def display_player_stats(analyzer, player_name: str):
             'VISION_SCORE': 'Vision Score'
         })
 
-        # Rename tournament column only if it exists (for tournament games)
-        if game_type == "Tournois":  # Removed Global from this condition
+        # Rename tournament column only if it exists
+        if game_type in ["Tournois", "Global"]:
             display_df = display_df.rename(columns={'nom_tournoi': 'Tournoi'})
 
         # Format the duration from milliseconds to mm:ss

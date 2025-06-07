@@ -103,6 +103,24 @@ def display_global_stats(analyzer):
             margin-top: 40px; /* Ajout d'une marge en haut */
             margin-bottom: 40px;
         }
+        .player-header {
+            background: rgba(20, 20, 28, 0.5);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 20px 0 40px 0;
+        }
+        .player-name {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        .role-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -191,3 +209,112 @@ def display_global_stats(analyzer):
 
     except Exception as e:
         st.error(f"Error displaying champions: {str(e)}")
+
+def display_player_stats(analyzer, player_name):
+    stats = analyzer.get_player_stats(player_name)
+    
+    # Ajout du style spécifique aux stats joueurs
+    st.markdown("""
+        <style>
+        .player-header {
+            background: rgba(20, 20, 28, 0.5);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 20px 0 40px 0;
+        }
+        .player-name {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 16px;
+        }
+        .role-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # En-tête du joueur
+    player_header = f"""
+    <div class="stats-container">
+        <div class="player-header">
+            <div class="player-name">
+                <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/lane-{stats['role'].lower()}.png" 
+                     class="role-icon">
+                {player_name}
+            </div>
+            <div class="overview-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Games</div>
+                    <div class="stat-value">{stats['total_games']}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Winrate</div>
+                    <div class="stat-value">{stats['winrate']:.1f}%</div>
+                    <div class="stat-subtext">{stats['wins']}W - {stats['losses']}L</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">KDA</div>
+                    <div class="stat-value">{stats['kda']:.2f}</div>
+                    <div class="stat-subtext">{stats['avg_kills']:.1f}/{stats['avg_deaths']:.1f}/{stats['avg_assists']:.1f}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">CS/min</div>
+                    <div class="stat-value">{stats['cs_per_min']:.1f}</div>
+                    <div class="stat-subtext">{stats['avg_cs']} CS avg</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(player_header, unsafe_allow_html=True)
+
+    # Section Champions joués du joueur
+    try:
+        champion_stats = stats.get('champion_stats', {})
+        if champion_stats:
+            with st.container():
+                st.markdown('<div class="overview-title">CHAMPIONS PLAYED</div>', unsafe_allow_html=True)
+                
+                # Première ligne (5 champions)
+                cols1 = st.columns(5)
+                # Deuxième ligne (5 champions)
+                cols2 = st.columns(5)
+                
+                sorted_champions = sorted(
+                    [(champ, data) for champ, data in champion_stats.items()],
+                    key=lambda x: x[1].get('games', 0),
+                    reverse=True
+                )[:10]
+
+                for idx, (champion, data) in enumerate(sorted_champions):
+                    row = 0 if idx < 5 else 1
+                    col_idx = idx % 5
+                    current_cols = cols1 if row == 0 else cols2
+                    
+                    with current_cols[col_idx]:
+                        games = data.get('games', 0)
+                        wins = data.get('wins', 0)
+                        winrate = (wins / games * 100) if games > 0 else 0
+                        kda = data.get('kda', 0)
+                        winrate_class = "winrate-high" if winrate >= 50 else "winrate-low"
+                        
+                        champion_card = f"""
+                        <div class="champion-card">
+                            <img src="https://ddragon.leagueoflegends.com/cdn/13.10.1/img/champion/{champion}.png" 
+                                 class="champion-icon" 
+                                 onerror="this.onerror=null; this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png';">
+                            <div class="champion-info">
+                                <div class="champion-name">{champion}</div>
+                                <div class="champion-games">{games} games</div>
+                                <div class="champion-winrate {winrate_class}">{winrate:.1f}% WR • {kda:.2f} KDA</div>
+                            </div>
+                        </div>
+                        """
+                        st.markdown(champion_card, unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"Error displaying player champions: {str(e)}")

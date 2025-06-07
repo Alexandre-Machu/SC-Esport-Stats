@@ -131,7 +131,7 @@ def main():
                 "MID": "Futeyy",
                 "SUPPORT": "Dert"
             }
-            display_player_stats(analyzer, role_to_player[st.session_state.selected_role])
+            display_player_stats(analyzer, role_to_player[st.session_state.selected_role], "Global")
     else:
         st.title("Statistiques Globales")
         display_global_stats(analyzer)  # Pass the analyzer object, not stats dictionary
