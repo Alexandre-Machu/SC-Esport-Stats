@@ -43,6 +43,12 @@ def main():
             font-size: 24px;
             font-weight: bold;
         }
+        th.level0.row_heading {
+            display: none;
+        }
+        th.blank.level0 {
+            display: none;
+        }
         </style>
     """, unsafe_allow_html=True)
 

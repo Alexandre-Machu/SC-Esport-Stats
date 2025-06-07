@@ -1,69 +1,75 @@
 # SC-Esport-Stats
 
-## Overview
-SC-Esport-Stats is a web application built with Streamlit that allows users to view and analyze League of Legends esports statistics for the SC-Esport team. The application provides a user-friendly interface for displaying various player and team statistics.
+## Aperçu
+SC-Esport-Stats est une application web construite avec Streamlit qui permet aux utilisateurs de visualiser et d'analyser les statistiques League of Legends de l'équipe SC-Esport. L'application fournit une interface conviviale pour afficher diverses statistiques des joueurs et de l'équipe.
 
-## Project Structure
+## Structure du Projet
 ```
 sc-esport-stats
 ├── src
-│   ├── app.py                # Main entry point of the Streamlit application
+│   ├── app.py                # Point d'entrée principal de l'application Streamlit
 │   ├── components
-│   │   ├── stats_display.py        # Global statistics display
-│   │   └── player_stats_display.py # Player-specific statistics display
+│   │   ├── stats_display.py        # Affichage des statistiques globales
+│   │   └── player_stats_display.py # Affichage des statistiques par joueur
 │   └── data_processing
-│       └── stats_analyzer.py       # Data processing and analysis
+│       └── stats_analyzer.py       # Traitement et analyse des données
 ├── data
-│   └── *.json                # Match data files
-├── requirements.txt          # Python dependencies
+│   └── *.json                # Fichiers de données des matchs
+├── requirements.txt          # Dépendances Python
 ├── .streamlit
-│   └── config.toml          # Streamlit configuration with custom theme
+│   └── config.toml          # Configuration Streamlit avec thème personnalisé
 └── README.md
 ```
 
-## Features
-- **Role-based Navigation**: Easy access to player statistics by role (TOP, JUNGLE, MID, ADC, SUPPORT)
-- **Player Statistics**:
-  - Average KDA, kills, deaths, and assists
-  - CS per minute statistics
-  - Vision score tracking
-  - Champion pool analysis
-- **Match History**:
-  - Detailed game history with champion icons
-  - Win/Loss tracking
-  - Performance metrics per game
-  - Champion-specific statistics
-- **Visual Analytics**:
-  - Champion win/loss distribution
-  - Performance trends
-  - Interactive data visualizations
+## Fonctionnalités
+- **Navigation par Rôle**: Accès facile aux statistiques des joueurs par rôle (TOP, JUNGLE, MID, ADC, SUPPORT)
+- **Statistiques des Joueurs**:
+  - Moyenne KDA, éliminations, morts et assistances (avec gestion sécurisée des nombres)
+  - Statistiques CS par minute (avec valeurs par défaut)
+  - Suivi du score de vision
+  - Analyse des champions joués
+- **Historique des Matchs**:
+  - Historique détaillé avec icônes des champions
+  - Suivi Victoires/Défaites avec indicateurs visuels (✅/❌)
+  - Métriques de performance par partie (avec validation des données)
+  - Statistiques par champion
+- **Analyses Visuelles**:
+  - Distribution victoires/défaites par champion
+  - Tendances de performance
+  - Visualisations de données interactives avec Plotly
+- **Gestion des Données**:
+  - Conversions numériques sécurisées
+  - Valeurs par défaut pour les données manquantes
+  - Gestion robuste des erreurs
 
-## Getting Started
+## Démarrage
 
-### Prerequisites
-- Python 3.7 or higher
+### Prérequis
+- Python 3.7 ou supérieur
 - Streamlit
+- Pandas
+- Plotly
 
 ### Installation
-1. Clone the repository:
+1. Cloner le dépôt:
    ```
-   git clone <repository-url>
+   git clone <url-du-dépôt>
    cd sc-esport-stats
    ```
 
-2. Install the required packages:
+2. Installer les packages requis:
    ```
    pip install -r requirements.txt
    ```
 
-### Running the Application
-To run the Streamlit application:
+### Lancement de l'Application
+Pour lancer l'application Streamlit:
 ```
 streamlit run src/app.py
 ```
 
 ### Configuration
-The application uses a custom theme defined in `.streamlit/config.toml`:
+L'application utilise un thème personnalisé défini dans `.streamlit/config.toml`:
 ```toml
 [theme]
 primaryColor = "#0b9394"
@@ -72,9 +78,20 @@ secondaryBackgroundColor = "#262730"
 textColor = "#fafafa"
 ```
 
-## Data Sources
-- Match data is stored in JSON format
-- Champion icons are fetched from Riot Games Data Dragon API
+## Traitement des Données
+- Les données numériques sont converties de manière sécurisée
+- Les valeurs manquantes sont remplacées par des valeurs par défaut cohérentes
+- Le formatage des dates est standardisé
+- Gestion des erreurs pour le traitement des données
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Sources de Données
+- Les données des matchs sont stockées au format JSON
+- Les icônes des champions sont récupérées depuis l'API Data Dragon de Riot Games
+
+## Contribution
+Les contributions sont les bienvenues ! N'hésitez pas à soumettre une Pull Request.
+
+## Problèmes Connus
+- La validation des données est strictement appliquée pour éviter les valeurs NaN
+- Toutes les colonnes numériques utilisent des méthodes de conversion sécurisées
+- Des valeurs par défaut sont fournies pour les données manquantes
