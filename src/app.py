@@ -127,18 +127,14 @@ def main():
                     st.rerun()  # Force la page à se recharger complètement
     
         # Mise à jour de l'affichage des stats joueur avec le type sélectionné
-        if st.session_state.selected_role == "ADC":
-            adc_players = ["Tixty", "D4ff"]
-            selected_adc = st.selectbox("Sélectionner l'ADC:", adc_players)
-            display_player_stats(analyzer, selected_adc, selected_game_type)
-        else:
-            role_to_player = {
-                "TOP": "Claquette",
-                "JUNGLE": "Spectros",
-                "MID": "Futeyy",
-                "SUPPORT": "Dert"
-            }
-            display_player_stats(analyzer, role_to_player[st.session_state.selected_role], selected_game_type)
+        role_to_player = {
+            "TOP": "Claquette",
+            "JUNGLE": "Spectros",
+            "MID": "Futeyy",
+            "ADC": "Tixty",
+            "SUPPORT": "Dert"
+        }
+        display_player_stats(analyzer, role_to_player[st.session_state.selected_role], selected_game_type)
     else:
         st.title("Statistiques Globales")
         display_global_stats(analyzer, selected_game_type)  # Ajout du type de partie

@@ -23,10 +23,6 @@ class StatsAnalyzer:
                 "role": "ADC", 
                 "tags": ["TSC Tixty"]
             },
-            "D4ff": {
-                "role": "ADC", 
-                "tags": ["D4ff"]
-            },
             "Dert": {
                 "role": "SUPPORT", 
                 "tags": ["TSC Dert"]
