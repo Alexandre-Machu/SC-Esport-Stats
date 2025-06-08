@@ -254,8 +254,16 @@ class StatsAnalyzer:
             del stats['assists']
             del stats['cs']
             
-            # Calculate vision per minute and store it
-            stats['vision_per_min'] = temp_vision / total_game_duration if total_game_duration > 0 else 0
+            # Calculate vision per minute using actual game duration
+            total_vision_score = stats['vision_score']
+            total_game_duration = 0
+            for game in filtered_matches:
+                for participant in game['participants']:
+                    if any(tag in participant['RIOT_ID_GAME_NAME'] for tag in self.players[player_name]['tags']):
+                        total_game_duration += game['gameDuration'] / 60000  # Convert ms to minutes
+                        break
+            
+            stats['vision_per_min'] = total_vision_score / total_game_duration if total_game_duration > 0 else 0
             
             # Keep champion counts for display
             stats['champion_counts'] = stats['champion_counts']

@@ -297,7 +297,7 @@ def display_global_stats(analyzer, game_type: str = "Global"):
         }
         
         role_icon = role_mapping.get(player_data['role'], 'unknown')
-        vision_per_min = player_data['vision_score'] / player_data['games'] / 30 if player_data['games'] > 0 else 0
+        vision_per_min = player_data['vision_per_min'] if player_data['games'] > 0 else 0
         
         # Remplacer le template player_card par :
         player_card = f"""
