@@ -119,7 +119,7 @@ class StatsAnalyzer:
                 games.append(game_data)
         return games
 
-    def get_global_stats(self, game_type: str = "Global"):
+    def get_global_stats(self, game_type: str = "Global") -> dict:
         # Filtrer les matches selon le type
         if game_type == "Global":
             filtered_matches = self.matches
@@ -165,6 +165,95 @@ class StatsAnalyzer:
                     if player.get('WIN') == 'Win':
                         champion_stats[champion]['wins'] += 1
         
+        # Add player statistics
+        player_stats = {}
+        for game in filtered_matches:
+            for player_data in game['participants']:
+                player_name = player_data['RIOT_ID_GAME_NAME']
+                
+                # Trouver le nom du joueur et son rôle à partir des tags
+                found_player = None
+                for p_name, p_info in self.players.items():
+                    if any(tag in player_name for tag in p_info['tags']):
+                        found_player = p_name
+                        break
+                
+                if found_player:
+                    if found_player not in player_stats:
+                        player_stats[found_player] = {
+                            'role': self.players[found_player]['role'],
+                            'games': 0,
+                            'wins': 0,
+                            'kills': 0,
+                            'deaths': 0,
+                            'assists': 0,
+                            'cs': 0,
+                            'vision_score': 0,
+                            'most_played_champions': [],
+                            'champion_counts': {}
+                        }
+                    
+                    # Replace the stats accumulation block with this:
+                    stats = player_stats[found_player]
+                    stats['games'] += 1
+                    stats['wins'] += 1 if player_data['WIN'] == 'Win' else 0
+                    stats['kills'] += int(player_data['CHAMPIONS_KILLED'])
+                    stats['deaths'] += int(player_data['NUM_DEATHS'])
+                    stats['assists'] += int(player_data['ASSISTS'])
+                    stats['cs'] += int(player_data['MINIONS_KILLED'])
+                    stats['vision_score'] += int(player_data['VISION_SCORE'])
+                    
+                    # Track champion played
+                    champ = player_data['SKIN']
+                    if champ in stats['champion_counts']:
+                        stats['champion_counts'][champ] += 1
+                    else:
+                        stats['champion_counts'][champ] = 1
+
+        # Calculate averages and format data for each player
+        for player_name, stats in player_stats.items():
+            games = stats['games']
+            stats['kda'] = (stats['kills'] + stats['assists']) / max(stats['deaths'], 1)
+            
+            # Calculate total game duration in minutes
+            total_game_duration = 0
+            for game in filtered_matches:
+                for participant in game['participants']:
+                    if any(tag in participant['RIOT_ID_GAME_NAME'] for tag in self.players[player_name]['tags']):
+                        # gameDuration is in milliseconds, convert to minutes
+                        total_game_duration += game['gameDuration'] / 60000
+                        break
+            
+            # Calculate real CS per minute using actual game duration
+            stats['cs_per_min'] = stats['cs'] / total_game_duration if total_game_duration > 0 else 0
+            
+            # Calculate total team kills before player stats
+            total_team_kills = 0
+            for game in filtered_matches:
+                game_team_kills = 0
+                for participant in game['participants']:
+                    if any(tag in participant['RIOT_ID_GAME_NAME'] for p_info in self.players.values() for tag in p_info['tags']):
+                        game_team_kills += int(participant['CHAMPIONS_KILLED'])  # Convert to int
+                total_team_kills += game_team_kills
+            
+            stats['kp'] = ((stats['kills'] + stats['assists']) / total_team_kills * 100) if total_team_kills > 0 else 0
+            
+            # Get most played champions
+            stats['most_played_champions'] = sorted(
+                stats['champion_counts'].items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:3]
+            stats['most_played_champions'] = [champ for champ, _ in stats['most_played_champions']]
+            
+            # Clean up temporary data
+            del stats['champion_counts']
+            del stats['kills']
+            del stats['deaths']
+            del stats['assists']
+            del stats['cs']
+            del stats['vision_score']
+
         return {
             'total_games': total_games,
             'wins': wins,
@@ -176,7 +265,8 @@ class StatsAnalyzer:
             'red_side_games': red_side_games,
             'red_side_wins': red_side_wins,
             'red_side_winrate': (red_side_wins / red_side_games) * 100 if red_side_games > 0 else 0,
-            'champion_stats': champion_stats
+            'champion_stats': champion_stats,
+            'player_stats': player_stats
         }
 
     def get_player_stats(self, player_name: str, game_type: str = "Global"):
