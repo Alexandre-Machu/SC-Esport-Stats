@@ -172,3 +172,13 @@
     color: #E74C3C !important;
     font-weight: 600;
 }
+
+/* Styles pour les nouvelles colonnes */
+.dataframe td[data-col="PINKS"] {
+    text-align: center;
+}
+
+.dataframe td[data-col="VISION EFF"],
+.dataframe td[data-col="DMG/GOLD"] {
+    text-align: right;
+}

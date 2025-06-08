@@ -157,30 +157,107 @@ def display_match_history(df: pd.DataFrame):
         lambda x: f'<img src="{get_champion_icon_url(x)}" width="30" height="30"> {format_champion_name(x)}'
     )
     display_df['W/L'] = df['Win'].apply(lambda x: "✅ Win" if x == "Win" else "❌ Lose")
-    display_df['TYPE'] = df['type_partie'].map({'Scrim': '⚔️ Scrim', 'Tournoi': '🛡️ Tournoi'})
+    
+    # Correction du type de partie
+    if 'type_partie' in df.columns:
+        display_df['TYPE'] = df['type_partie'].map({'Scrim': '⚔️ Scrim', 'Tournoi': '🛡️ Tournoi'})
+    else:
+        display_df['TYPE'] = "-"
+    
+    # Ajouter les colonnes de base qui existent toujours
     display_df['VS'] = df['equipe_adverse']
     display_df['GAME'] = df['numero_game']
     display_df['DURÉE'] = pd.to_numeric(df['gameDuration']).apply(
         lambda x: f"{int(x/60000):02d}:{int((x%60000)/1000):02d}"
     )
-    display_df['KDA'] = df['KDA']
+    
+    # Calculer le KDA numérique et l'ajouter avec mise en forme
+    df['kda_numeric'] = df['KDA'].apply(lambda kda_str: calculate_kda_from_string(kda_str))
+    display_df['KDA'] = df.apply(
+        lambda row: f"{row['KDA']} <span class='{get_kda_class(row['kda_numeric'])}'>[{row['kda_numeric']:.2f}]</span>",
+        axis=1
+    )
+    
     display_df['CS/MIN'] = df['cs_per_min'].round(1)
-    display_df['VISION'] = df['VISION_SCORE']
-    display_df['KP'] = df['KP'].apply(lambda x: f"{float(x):.1f}%")
-
+    
+    # Ajouter KP (Kill Participation)
+    if 'KP' in df.columns:
+        display_df['KP'] = df['KP'].apply(lambda x: f"{float(x):.1f}%")
+    
+    # Ajouter VISION SCORE avec efficacité si disponible
+    if 'VISION_SCORE' in df.columns:
+        # Estimer la vision efficiency à partir des données disponibles
+        # Puisque nous n'avons pas les données réelles, nous utilisons un calcul approximatif
+        est_vision_eff = calculate_est_vision_efficiency(df)
+        
+        if est_vision_eff is not None:
+            df['est_vision_efficiency'] = est_vision_eff
+            display_df['VISION'] = df.apply(
+                lambda row: f"{row['VISION_SCORE']} ({row['est_vision_efficiency']:.0f}%)",
+                axis=1
+            )
+        else:
+            display_df['VISION'] = df['VISION_SCORE'].astype(str)
+    
+    # Calculer l'efficacité d'or (même si nous n'avons pas les données exactes)
+    # Nous pouvons estimer à partir des kills/assists/deaths et du temps de jeu
+    df['gold_efficiency'] = calculate_est_gold_efficiency(df)
+    
+    # Ajouter la colonne GOLD EFF avec formatage conditionnel
+    display_df['GOLD EFF'] = df['gold_efficiency'].apply(
+        lambda x: f"<span class='{get_gold_efficiency_class(x)}'>{x:.3f}</span>"
+    )
+    
     # Display table
     st.write(
         display_df.to_html(escape=False, index=False),
         unsafe_allow_html=True
     )
 
-def get_color_class(value: float, thresholds: dict) -> str:
-    """Return color class based on value and thresholds."""
-    if value >= thresholds['high']:
-        return 'color-high'
-    elif value >= thresholds['medium']:
-        return 'color-medium'
+# Fonction pour calculer le KDA numérique à partir de la chaîne KDA
+def calculate_kda_from_string(kda_str):
+    try:
+        parts = kda_str.split('/')
+        kills = float(parts[0])
+        deaths = float(parts[1])
+        assists = float(parts[2])
+        return (kills + assists) / max(1, deaths)  # Éviter la division par zéro
+    except (IndexError, ValueError):
+        return 0
+
+# Fonction pour déterminer la classe CSS basée sur le KDA
+def get_kda_class(value):
+    if value >= 4: return 'color-high'
+    if value >= 3: return 'color-medium'
     return 'color-low'
+
+# Fonction pour estimer l'efficacité de vision (approximation puisque nous n'avons pas les données exactes)
+def calculate_est_vision_efficiency(df):
+    if 'VISION_SCORE' not in df.columns:
+        return None
+    
+    # Nous ne pouvons faire qu'une estimation relative basée sur VISION_SCORE
+    # Une vraie efficacité serait PlaceUsefulControlWards / VISION_WARDS_BOUGHT_IN_GAME
+    return df['VISION_SCORE'].apply(lambda x: min(100, float(x) * 2))
+
+# Fonction pour estimer l'efficacité d'or (approximation)
+def calculate_est_gold_efficiency(df):
+    # Estimation basée sur KDA, game duration et cs_per_min
+    # Cette formule est une approximation, pas une vraie mesure gold/damage
+    return df.apply(
+        lambda row: float(row['cs_per_min']) * 0.01 + 
+                   calculate_kda_from_string(row['KDA']) * 0.002 +
+                   (float(row['gameDuration']) / 60000) * 0.0001,
+        axis=1
+    )
+
+# Nouvelle fonction pour déterminer la classe CSS basée sur l'efficacité d'or
+def get_gold_efficiency_class(value):
+    """Return color class based on gold efficiency (higher is better for our estimate)."""
+    if value >= 0.1: return 'color-high'
+    if value >= 0.05: return 'color-medium'
+    return 'color-low'
+    
 
 def display_champion_stats(df: pd.DataFrame):
     """Display the champion statistics table."""
@@ -245,3 +322,11 @@ def display_champion_stats(df: pd.DataFrame):
         display_df.to_html(escape=False, index=False),
         unsafe_allow_html=True
     )
+
+def get_color_class(value: float, thresholds: dict) -> str:
+    """Return color class based on value and thresholds."""
+    if value >= thresholds['high']:
+        return 'color-high'
+    elif value >= thresholds['medium']:
+        return 'color-medium'
+    return 'color-low'
