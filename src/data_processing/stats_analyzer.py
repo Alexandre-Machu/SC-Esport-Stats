@@ -214,6 +214,30 @@ class StatsAnalyzer:
             games = stats['games']
             stats['kda'] = (stats['kills'] + stats['assists']) / max(stats['deaths'], 1)
             
+            # Calculate KP per game then average
+            kp_per_game = []
+            for game in filtered_matches:
+                game_team_kills = 0
+                player_contribution = 0
+                
+                # First get team kills for this game
+                for participant in game['participants']:
+                    if any(tag in participant['RIOT_ID_GAME_NAME'] for p_info in self.players.values() for tag in p_info['tags']):
+                        game_team_kills += int(participant['CHAMPIONS_KILLED'])
+                
+                # Then get player's contribution
+                for participant in game['participants']:
+                    if any(tag in participant['RIOT_ID_GAME_NAME'] for tag in self.players[player_name]['tags']):
+                        kills = int(participant['CHAMPIONS_KILLED'])
+                        assists = int(participant['ASSISTS'])
+                        player_contribution = kills + assists
+                        if game_team_kills > 0:
+                            kp_per_game.append((player_contribution / game_team_kills) * 100)
+                        break
+            
+            # Calculate average KP
+            stats['kp'] = sum(kp_per_game) / len(kp_per_game) if kp_per_game else 0
+
             # Calculate total game duration in minutes
             total_game_duration = 0  # Fixed typo in variable name
             for game in filtered_matches:
@@ -234,8 +258,6 @@ class StatsAnalyzer:
                     if any(tag in participant['RIOT_ID_GAME_NAME'] for p_info in self.players.values() for tag in p_info['tags']):
                         game_team_kills += int(participant['CHAMPIONS_KILLED'])  # Convert to int
                 total_team_kills += game_team_kills
-            
-            stats['kp'] = ((stats['kills'] + stats['assists']) / total_team_kills * 100) if total_team_kills > 0 else 0
             
             # Get most played champions
             stats['most_played_champions'] = sorted(
@@ -301,9 +323,16 @@ class StatsAnalyzer:
         total_vision = 0
         game_duration_minutes = 0
         
-        for game in filtered_matches:  # Utilise filtered_matches au lieu de self.matches
+        for game in filtered_matches:
             for participant in game['participants']:
                 if any(tag in participant['RIOT_ID_GAME_NAME'] for tag in player_tags):
+                    # Calculate team kills first
+                    game_team_kills = sum(
+                        int(p['CHAMPIONS_KILLED']) 
+                        for p in game['participants']
+                        if any(tag in p['RIOT_ID_GAME_NAME'] for p_info in self.players.values() for tag in p_info['tags'])
+                    )
+
                     match_info = {
                         'SKIN': participant['SKIN'],
                         'Win': participant['WIN'],
@@ -316,17 +345,16 @@ class StatsAnalyzer:
                         'equipe_adverse': game['equipe_adverse'],
                         'Missions_CreepScore': participant['Missions_CreepScore'],
                         'VISION_SCORE': participant['VISION_SCORE'],
-                        'gameDuration': game['gameDuration']
+                        'gameDuration': game['gameDuration'],
+                        'KP': 0,  # Initialisation
+                        'numero_game': game.get('numero_game', '1'),  # Default to '1' if not found
+                        'game_tournoi': game.get('game_tournoi', None)  # Add tournament game number if available
                     }
-                    
-                    # Add tournament specific info if applicable
-                    if game['type_partie'] == 'Tournoi':
-                        match_info.update({
-                            'nom_tournoi': game['nom_tournoi'],
-                            'game_tournoi': game['game_tournoi']
-                        })
-                
-                    match_info['numero_game'] = game['numero_game']
+
+                    # Calculate KP directly here
+                    player_contribution = int(participant['CHAMPIONS_KILLED']) + int(participant['ASSISTS'])
+                    match_info['KP'] = round((player_contribution / game_team_kills * 100), 1) if game_team_kills > 0 else 0
+
                     match_history.append(match_info)
                 
                     # Update totals

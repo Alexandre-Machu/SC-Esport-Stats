@@ -197,10 +197,8 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
     # Match History Table
     st.subheader("Historique des parties")
     if stats['match_history']:
+        # Create DataFrame once
         df = pd.DataFrame(stats['match_history'])
-        
-        # Debug: Print available columns
-        print("Available columns:", df.columns.tolist())
         
         # Format date
         df['date'] = pd.to_datetime(df['date'], format='%d%m%Y')
@@ -211,12 +209,9 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
             else int(pd.Series(row['numero_game']).str.extract('(\d+)').iloc[0,0]), 
             axis=1
         )
-
-        # Sort by date (descending) and tournament game number (descending)
-        df = df.sort_values(
-            ['date', 'game_number'], 
-            ascending=[False, False]  # Changed to False for game_number to sort 4->1
-        )
+        
+        # Sort by date and game number
+        df = df.sort_values(['date', 'game_number'], ascending=[False, False])
         
         # Format date for display
         df['date'] = df['date'].dt.strftime('%d/%m/%Y')
@@ -234,51 +229,48 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
             lambda x: f'<img src="{get_champion_icon_url(x)}" width="30" height="30" style="vertical-align:middle"> {format_champion_name(x)}'
         )
         
-        # Add these calculations before creating display_df
+        # Add KDA components
         df['Kills'] = df['KDA'].str.split('/').str[0].astype(int)
         df['Deaths'] = df['KDA'].str.split('/').str[1].astype(int)
         df['Assists'] = df['KDA'].str.split('/').str[2].astype(int)
-
-        # Définir les colonnes de base
+        
+        # Format KP
+        df['KP'] = df['KP'].apply(lambda x: f"{x:.1f}%")
+        
+        # Define columns to display
         columns_to_display = [
             'date',
             'Champion_Icon',
             'Win',
             'type_partie',
             'equipe_adverse',
-            'numero_game',
+            'game_number',  # Changed from numero_game
             'gameDuration',
             'KDA',
-            'CHAMPIONS_KILLED',
-            'NUM_DEATHS',
-            'ASSISTS',
+            'Kills',  # Changed from CHAMPIONS_KILLED
+            'Deaths',  # Changed from NUM_DEATHS
+            'Assists',  # Changed from ASSISTS
             'CS/min',
-            'VISION_SCORE'
+            'VISION_SCORE',
+            'KP'
         ]
 
-        # Ajouter la colonne du tournoi uniquement si on n'est pas en mode Global
-        if game_type == "Tournoi":  # Modification ici : "Tournois" -> "Tournoi"
-            columns_to_display.insert(4, 'nom_tournoi')
-
+        # Create display DataFrame
         display_df = df[columns_to_display].rename(columns={
             'date': 'Date',
             'Champion_Icon': 'Champion',
             'Win': 'W/L',
             'type_partie': 'Type',
             'equipe_adverse': 'VS',
-            'numero_game': 'Game',
+            'game_number': 'Game',
             'gameDuration': 'Durée',
             'KDA': 'KDA',
-            'CHAMPIONS_KILLED': 'Kills',
-            'NUM_DEATHS': 'Deaths',
-            'ASSISTS': 'Assists',
+            'Kills': 'Kills',
+            'Deaths': 'Deaths',
+            'Assists': 'Assists',
             'CS/min': 'CS/min',
             'VISION_SCORE': 'Vision Score'
         })
-
-        # Renommer la colonne du tournoi uniquement si elle existe
-        if game_type == "Tournoi":  # Modification ici aussi : "Tournois" -> "Tournoi"
-            display_df = display_df.rename(columns={'nom_tournoi': 'Tournoi'})
 
         # Format the duration from milliseconds to mm:ss
         display_df['Durée'] = pd.to_numeric(display_df['Durée']).apply(
