@@ -223,8 +223,8 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
         
         # Calculate CS/min
         df['CS/min'] = df.apply(lambda row: 
-            float(row['MINIONS_KILLED']) / (float(row['gameDuration']) / 60000) 
-            if row['MINIONS_KILLED'] and row['gameDuration'] 
+            float(row['Missions_CreepScore']) / (float(row['gameDuration']) / 60000) 
+            if row['Missions_CreepScore'] and row['gameDuration'] 
             else 0.0, 
             axis=1
         )

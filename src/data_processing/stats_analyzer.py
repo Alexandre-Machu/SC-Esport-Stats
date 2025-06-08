@@ -188,7 +188,7 @@ class StatsAnalyzer:
                             'deaths': 0,
                             'assists': 0,
                             'cs': 0,
-                            'vision_score': 0,  # Make sure this is initialized
+                            'vision_score': 0,
                             'champion_counts': {},
                             'most_played_champions': []
                         }
@@ -199,7 +199,7 @@ class StatsAnalyzer:
                     stats['kills'] += int(player_data['CHAMPIONS_KILLED'])
                     stats['deaths'] += int(player_data['NUM_DEATHS'])
                     stats['assists'] += int(player_data['ASSISTS'])
-                    stats['cs'] += int(player_data['MINIONS_KILLED'])
+                    stats['cs'] += int(player_data['Missions_CreepScore'])
                     stats['vision_score'] += int(player_data.get('VISION_SCORE', 0))  # Use get() with default value
                     
                     # Track champion played
@@ -306,7 +306,7 @@ class StatsAnalyzer:
                         'date': game['date'],
                         'type_partie': game['type_partie'],
                         'equipe_adverse': game['equipe_adverse'],
-                        'MINIONS_KILLED': participant['MINIONS_KILLED'],
+                        'Missions_CreepScore': participant['Missions_CreepScore'],
                         'VISION_SCORE': participant['VISION_SCORE'],
                         'gameDuration': game['gameDuration']
                     }
@@ -325,7 +325,7 @@ class StatsAnalyzer:
                     total_kills += int(participant['CHAMPIONS_KILLED'])
                     total_deaths += int(participant['NUM_DEATHS'])
                     total_assists += int(participant['ASSISTS'])
-                    total_cs += int(participant['MINIONS_KILLED'])
+                    total_cs += int(participant['Missions_CreepScore'])
                     total_vision += int(participant.get('VISION_SCORE', 0))
                     game_duration_minutes += float(game['gameDuration']) / 60000  # Correction: divisé par 60000 pour convertir ms en minutes
                 
