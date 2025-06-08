@@ -16,82 +16,62 @@ sc-esport-stats
 ├── data
 │   └── *.json                # Fichiers de données des matchs
 ├── requirements.txt          # Dépendances Python
-├── .streamlit
-│   └── config.toml          # Configuration Streamlit avec thème personnalisé
 └── README.md
 ```
 
 ## Fonctionnalités
-- **Navigation par Rôle**: Accès facile aux statistiques des joueurs par rôle (TOP, JUNGLE, MID, ADC, SUPPORT)
-- **Statistiques des Joueurs**:
-  - Moyenne KDA, éliminations, morts et assistances (avec gestion sécurisée des nombres)
-  - Statistiques CS par minute (avec valeurs par défaut)
-  - Suivi du score de vision
-  - Analyse des champions joués
+
+### Vue d'Ensemble des Joueurs
+- **Affichage par Rôle**: TOP > JUNGLE > MID > ADC > SUPPORT
+- **Statistiques Principales**:
+  - KDA (Kills/Deaths/Assists)
+  - Kill Participation (%)
+  - CS/min (tous les rôles sauf support)
+  - Vision Score (support uniquement)
+  - Nombre de parties jouées
+- **Champions**: Affichage des champions les plus joués avec nombre de parties
+
+### Statistiques Détaillées par Joueur
+- **Métriques de Performance**:
+  - KDA détaillé avec moyennes
+  - CS/min calculé à partir de `Missions_CreepScore`
+  - Vision score moyen
 - **Historique des Matchs**:
-  - Historique détaillé avec icônes des champions
-  - Suivi Victoires/Défaites avec indicateurs visuels (✅/❌)
-  - Métriques de performance par partie (avec validation des données)
-  - Statistiques par champion
-- **Analyses Visuelles**:
-  - Distribution victoires/défaites par champion
-  - Tendances de performance
-  - Visualisations de données interactives avec Plotly
-- **Gestion des Données**:
-  - Conversions numériques sécurisées
-  - Valeurs par défaut pour les données manquantes
-  - Gestion robuste des erreurs
+  - Liste détaillée des parties
+  - Statistiques par partie (KDA, CS, Vision)
+  - Résultats (Victoire/Défaite)
+
+## Traitement des Données
+- Utilisation de `Missions_CreepScore` pour un calcul précis des CS
+- Calcul des moyennes par partie
+- Conversion des durées de partie (ms → minutes)
+- Tri automatique des joueurs par rôle
 
 ## Démarrage
 
 ### Prérequis
-- Python 3.7 ou supérieur
+- Python 3.7+
 - Streamlit
 - Pandas
-- Plotly
 
 ### Installation
 1. Cloner le dépôt:
-   ```
-   git clone <url-du-dépôt>
-   cd sc-esport-stats
-   ```
-
-2. Installer les packages requis:
-   ```
-   pip install -r requirements.txt
-   ```
-
-### Lancement de l'Application
-Pour lancer l'application Streamlit:
+```bash
+git clone <url-du-dépôt>
+cd sc-esport-stats
 ```
+
+2. Installer les dépendances:
+```bash
+pip install -r requirements.txt
+```
+
+### Lancement
+```bash
 streamlit run src/app.py
 ```
 
-### Configuration
-L'application utilise un thème personnalisé défini dans `.streamlit/config.toml`:
-```toml
-[theme]
-primaryColor = "#0b9394"
-backgroundColor = "#0e1117"
-secondaryBackgroundColor = "#262730"
-textColor = "#fafafa"
-```
-
-## Traitement des Données
-- Les données numériques sont converties de manière sécurisée
-- Les valeurs manquantes sont remplacées par des valeurs par défaut cohérentes
-- Le formatage des dates est standardisé
-- Gestion des erreurs pour le traitement des données
-
 ## Sources de Données
-- Les données des matchs sont stockées au format JSON
-- Les icônes des champions sont récupérées depuis l'API Data Dragon de Riot Games
-
-## Contribution
-Les contributions sont les bienvenues ! N'hésitez pas à soumettre une Pull Request.
-
-## Problèmes Connus
-- La validation des données est strictement appliquée pour éviter les valeurs NaN
-- Toutes les colonnes numériques utilisent des méthodes de conversion sécurisées
-- Des valeurs par défaut sont fournies pour les données manquantes
+- Données des matchs: Format JSON
+- Icons des champions: Data Dragon API (League of Legends)
+- Icons des rôles: Community Dragon
