@@ -24,8 +24,31 @@ def get_champion_icon_url(champion_name: str) -> str:
 
 def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
     # Récupération des stats
-    stats = analyzer.get_player_stats(player_name, game_type)  # Ajout du paramètre game_type ici
+    stats = analyzer.get_player_stats(player_name, game_type)
     
+    # Calcul des moyennes à partir de l'historique
+    if stats['match_history']:
+        df = pd.DataFrame(stats['match_history'])
+        
+        # Calcul du CS/min moyen
+        df['cs_per_min'] = df.apply(lambda row: 
+            float(row['Missions_CreepScore']) / (float(row['gameDuration']) / 60000) 
+            if pd.notnull(row.get('Missions_CreepScore')) and pd.notnull(row.get('gameDuration')) 
+            else 0.0, 
+            axis=1
+        )
+        
+        # Calculer la moyenne des CS/min
+        stats['cs_per_min'] = df['cs_per_min'].mean()
+        stats['avg_cs'] = df['Missions_CreepScore'].astype(float).mean()
+
+        # Calcul du KP moyen (en supposant que KP est déjà en pourcentage dans les données)
+        df['kp_value'] = df['KP'].astype(float)
+        stats['kp'] = df['kp_value'].mean()
+    else:
+        stats['cs_per_min'] = 0.0
+        stats['avg_cs'] = 0.0
+
     # Ajout du style CSS spécifique
     st.markdown("""
         <style>
@@ -65,27 +88,22 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
     <div class="player-stats-grid">
         <div class="player-stat-card">
             <div class="stat-label">KDA</div>
-            <div class="stat-value">{stats['kda']:.2f}</div>
-            <div class="stat-subtext">{stats['avg_kills']:.1f}/{stats['avg_deaths']:.1f}/{stats['avg_assists']:.1f}</div>
+            <div class="stat-value">{stats.get('kda', 0):.2f}</div>
+            <div class="stat-subtext">{stats.get('avg_kills', 0):.1f}/{stats.get('avg_deaths', 0):.1f}/{stats.get('avg_assists', 0):.1f}</div>
         </div>
         <div class="player-stat-card">
-            <div class="stat-label">Kills Moyen</div>
-            <div class="stat-value">{stats['avg_kills']:.1f}</div>
+            <div class="stat-label">KILLS MOYEN</div>
+            <div class="stat-value">{stats.get('avg_kills', 0):.1f}</div>
             <div class="stat-subtext">par partie</div>
         </div>
         <div class="player-stat-card">
-            <div class="stat-label">Deaths Moyen</div>
-            <div class="stat-value">{stats['avg_deaths']:.1f}</div>
+            <div class="stat-label">CS/MIN</div>
+            <div class="stat-value">{stats.get('cs_per_min', 0):.1f}</div>
             <div class="stat-subtext">par partie</div>
         </div>
         <div class="player-stat-card">
-            <div class="stat-label">Assists Moyen</div>
-            <div class="stat-value">{stats['avg_assists']:.1f}</div>
-            <div class="stat-subtext">par partie</div>
-        </div>
-        <div class="player-stat-card">
-            <div class="stat-label">Vision Score</div>
-            <div class="stat-value">{stats['avg_vision']:.1f}</div>
+            <div class="stat-label">VISION SCORE</div>
+            <div class="stat-value">{stats.get('avg_vision', 0):.1f}</div>
             <div class="stat-subtext">par partie</div>
         </div>
     </div>
