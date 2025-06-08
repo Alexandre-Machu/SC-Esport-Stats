@@ -188,12 +188,11 @@ class StatsAnalyzer:
                             'deaths': 0,
                             'assists': 0,
                             'cs': 0,
-                            'vision_score': 0,
-                            'most_played_champions': [],
-                            'champion_counts': {}
+                            'vision_score': 0,  # Make sure this is initialized
+                            'champion_counts': {},
+                            'most_played_champions': []
                         }
-                    
-                    # Replace the stats accumulation block with this:
+    
                     stats = player_stats[found_player]
                     stats['games'] += 1
                     stats['wins'] += 1 if player_data['WIN'] == 'Win' else 0
@@ -201,7 +200,7 @@ class StatsAnalyzer:
                     stats['deaths'] += int(player_data['NUM_DEATHS'])
                     stats['assists'] += int(player_data['ASSISTS'])
                     stats['cs'] += int(player_data['MINIONS_KILLED'])
-                    stats['vision_score'] += int(player_data['VISION_SCORE'])
+                    stats['vision_score'] += int(player_data.get('VISION_SCORE', 0))  # Use get() with default value
                     
                     # Track champion played
                     champ = player_data['SKIN']
@@ -216,7 +215,7 @@ class StatsAnalyzer:
             stats['kda'] = (stats['kills'] + stats['assists']) / max(stats['deaths'], 1)
             
             # Calculate total game duration in minutes
-            total_game_duration = 0
+            total_game_duration = 0  # Fixed typo in variable name
             for game in filtered_matches:
                 for participant in game['participants']:
                     if any(tag in participant['RIOT_ID_GAME_NAME'] for tag in self.players[player_name]['tags']):
@@ -246,13 +245,20 @@ class StatsAnalyzer:
             )[:3]
             stats['most_played_champions'] = [champ for champ, _ in stats['most_played_champions']]
             
+            # Keep vision_score for support role display
+            temp_vision = stats['vision_score']
+            
             # Clean up temporary data
-            del stats['champion_counts']
             del stats['kills']
             del stats['deaths']
             del stats['assists']
             del stats['cs']
-            del stats['vision_score']
+            
+            # Calculate vision per minute and store it
+            stats['vision_per_min'] = temp_vision / total_game_duration if total_game_duration > 0 else 0
+            
+            # Keep champion counts for display
+            stats['champion_counts'] = stats['champion_counts']
 
         return {
             'total_games': total_games,

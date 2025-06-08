@@ -123,47 +123,57 @@ def display_global_stats(analyzer, game_type: str = "Global"):
         .player-overview-card {
             background: rgba(30, 30, 40, 0.6);
             border-radius: 8px;
-            padding: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
-            gap: 12px;
-        }
-        .player-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
+            gap: 24px;
         }
         .player-stats {
             display: flex;
-            gap: 20px;
+            gap: 32px;
             align-items: center;
-            flex-grow: 1;
         }
-        .player-name {
-            color: #ffffff;
-            font-size: 16px;
-            font-weight: bold;
-            min-width: 120px;
-        }
-        .player-kda, .player-kp, .player-cs, .player-games {
-            color: #8890A0;
-            font-size: 14px;
-            min-width: 80px;
-            text-align: center;
-        }
-        .player-value {
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 16px;
-        }
-        .player-champions {
+        .player-champions-list {
             display: flex;
-            gap: 4px;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .champion-mini-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
         }
         .champion-mini-icon {
-            width: 24px;
-            height: 24px;
+            width: 32px;
+            height: 32px;
             border-radius: 4px;
+        }
+        .champion-play-count {
+            color: #8890A0;
+            font-size: 11px;
+        }
+        .player-kda, .player-kp, .player-cs, .player-games, .player-vision {
+            text-align: center;
+            min-width: 80px;
+        }
+        .section-divider {
+            border-top: 1px solid rgba(136, 144, 160, 0.2);
+            margin: 40px 0;
+            width: 100%;
+        }
+        
+        .player-overview-section {
+            margin-top: 40px;
+        }
+        
+        .player-overview-title {
+            color: #8890A0;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -254,45 +264,56 @@ def display_global_stats(analyzer, game_type: str = "Global"):
     except Exception as e:
         st.error(f"Error displaying champions: {str(e)}")
 
+    # Ajouter le séparateur and le titre avant la section des joueurs
+    st.markdown('<div class="section-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="player-overview-title">PLAYERS OVERVIEW</div>', unsafe_allow_html=True)
+
     # Section Players Overview
-    st.markdown('<div class="overview-title">PLAYERS OVERVIEW</div>', unsafe_allow_html=True)
-
-    # Création des colonnes pour l'affichage des joueurs
-    cols = st.columns(2)
-
-    # Pour chaque joueur dans les statistiques...
-    for idx, (player_name, player_data) in enumerate(stats['player_stats'].items()):
-        col_idx = idx % 2
-        with cols[col_idx]:
-            player_card = f"""
-            <div class="player-overview-card">
-                <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/assets/lane-{player_data['role'].lower()}.png" 
-                     class="player-icon">
-                <div class="player-stats">
-                    <div class="player-name">{player_name}</div>
-                    <div class="player-kda">
-                        <div class="player-value">{player_data['kda']:.1f}</div>
-                        KDA
-                    </div>
-                    <div class="player-kp">
-                        <div class="player-value">{player_data['kp']:.0f}%</div>
-                        KP
-                    </div>
-                    <div class="player-cs">
-                        <div class="player-value">{player_data['cs_per_min']:.1f}</div>
-                        CS/min
-                    </div>
-                    <div class="player-games">
-                        <div class="player-value">{player_data['games']}</div>
-                        Games
-                    </div>
-                    <div class="player-champions">
-                        {' '.join([f'<img src="https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/{champ}.png" class="champion-mini-icon" title="{champ}">' for champ in player_data['most_played_champions'][:3]])}
-                    </div>
-                </div>
-            </div>
-            """
-            st.markdown(player_card, unsafe_allow_html=True)
+    for player_name, player_data in stats['player_stats'].items():
+        role_mapping = {
+            'TOP': 'top',
+            'JUNGLE': 'jungle',
+            'MID': 'middle',
+            'ADC': 'bottom',
+            'SUPPORT': 'utility'
+        }
+        
+        role_icon = role_mapping.get(player_data['role'], 'unknown')
+        vision_per_min = player_data['vision_score'] / player_data['games'] / 30 if player_data['games'] > 0 else 0
+        
+        # Remplacer le template player_card par :
+        player_card = f"""
+<div class="player-overview-card">
+    <img src="https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-honor/global/default/assets/roleicon_{role_icon}.png" 
+         class="role-icon">
+    <div class="player-stats">
+        <div class="player-name">{player_name}</div>
+        <div class="player-kda">
+            <div class="player-value">{player_data['kda']:.1f}</div>
+            <div>KDA</div>
+        </div>
+        <div class="player-kp">
+            <div class="player-value">{player_data['kp']:.0f}%</div>
+            <div>KP</div>
+        </div>
+        {f'''<div class="player-vision">
+            <div class="player-value">{vision_per_min:.1f}</div>
+            <div>Vision/min</div>
+        </div>''' if player_data['role'] == 'SUPPORT' else f'''<div class="player-cs">
+            <div class="player-value">{player_data['cs_per_min']:.1f}</div>
+            <div>CS/min</div>
+        </div>'''}
+        <div class="player-games">
+            <div class="player-value">{player_data['games']}</div>
+            <div>Games</div>
+        </div>
+    </div>
+    <div class="player-champions-list">
+        {''.join([f'<div class="champion-mini-container"><img src="https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/{champ}.png" class="champion-mini-icon" title="{champ}"><span class="champion-play-count">{count}</span></div>' for champ, count in player_data['champion_counts'].items()])}
+    </div>
+</div>"""
+        
+        st.markdown(player_card, unsafe_allow_html=True)
 
 def display_player_stats(analyzer, player_name):
     stats = analyzer.get_player_stats(player_name)
