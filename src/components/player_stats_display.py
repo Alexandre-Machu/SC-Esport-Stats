@@ -106,6 +106,11 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
             <div class="stat-value">{stats.get('avg_vision', 0):.1f}</div>
             <div class="stat-subtext">par partie</div>
         </div>
+        <div class="player-stat-card">
+            <div class="stat-label">KP</div>
+            <div class="stat-value">{stats.get('kp', 0):.1f}%</div>
+            <div class="stat-subtext">participation aux kills</div>
+        </div>
     </div>
     """
     st.markdown(stats_html, unsafe_allow_html=True)
@@ -340,7 +345,8 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
             .format({
                 'KDA': '{:.2f}',
                 'CS/min': '{:.1f}',
-                'Vision Score': '{:.0f}'
+                'Vision Score': '{:.0f}',
+                'KP': lambda x: f"{float(str(x).rstrip('%')):.1f}%" if pd.notnull(x) else "0.0%"
             })
             .set_table_styles([
                 {'selector': 'thead th', 'props': [
@@ -371,6 +377,7 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
                 'color: #3498db' if '⚔️' in str(v) else
                 'color: #f1c40f' if '🛡️' in str(v) else
                 'color: #2ecc71; font-weight: bold' if x.name == 'KDA' else
+                'color: #ffffff; font-weight: bold' if x.name == 'KP' else
                 '' for v in x
             ], axis=1)
             .to_html(escape=False),
@@ -495,6 +502,12 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
         /* KDA Column special styling */
         .dataframe td:nth-child(8) {
             color: #2ecc71;
+            font-weight: bold;
+        }
+
+        /* KP Column special styling */
+        .dataframe td:nth-child(14) {
+            color: #ffffff;
             font-weight: bold;
         }
 
