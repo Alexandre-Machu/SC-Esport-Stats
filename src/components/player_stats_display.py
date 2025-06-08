@@ -198,12 +198,27 @@ def display_match_history(df: pd.DataFrame):
         else:
             display_df['VISION'] = df['VISION_SCORE'].astype(str)
     
-    # Calculer l'efficacité d'or (même si nous n'avons pas les données exactes)
-    df['gold_efficiency'] = calculate_est_gold_efficiency(df)
+    # Calculer l'efficacité d'or (dégâts par 1000 or)
+    if all(col in df.columns for col in ['GOLD_EARNED', 'TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']):
+        df['gold_efficiency'] = df.apply(
+            lambda row: (
+                float(row['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']) / float(row['GOLD_EARNED']) * 1000
+                if float(row['GOLD_EARNED']) > 0 else 0
+            ),
+            axis=1
+        )
+        
+        # Exemple de valeur calculée pour le debugging
+        print("Exemple de gold efficiency (dégâts/1000or):")
+        sample = df[['GOLD_EARNED', 'TOTAL_DAMAGE_DEALT_TO_CHAMPIONS', 'gold_efficiency']].head(3)
+        for _, row in sample.iterrows():
+            print(f"Or: {row['GOLD_EARNED']}, Dégâts: {row['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']}, Ratio: {row['gold_efficiency']:.1f}")
+    else:
+        df['gold_efficiency'] = calculate_est_gold_efficiency(df)
     
-    # Ajouter la colonne GOLD EFF avec formatage conditionnel et pourcentage
+    # Ajouter la colonne GOLD EFF avec formatage conditionnel
     display_df['GOLD EFF'] = df['gold_efficiency'].apply(
-        lambda x: f"<span class='{get_gold_efficiency_class(x * 100)}'>{x * 100:.1f}%</span>"
+        lambda x: f"<span class='{get_gold_efficiency_class(x)}'>{x:.1f}</span>"
     )
     
     # Display table
@@ -245,23 +260,30 @@ def calculate_est_vision_efficiency(df):
     # Une vraie efficacité serait PlaceUsefulControlWards / VISION_WARDS_BOUGHT_IN_GAME
     return df['VISION_SCORE'].apply(lambda x: min(100, float(x) * 2))
 
-# Fonction pour estimer l'efficacité d'or (approximation)
+# Fonction pour estimer l'efficacité d'or 
 def calculate_est_gold_efficiency(df):
-    # Estimation basée sur KDA, game duration et cs_per_min
-    # Cette formule est une approximation, pas une vraie mesure gold/damage
-    return df.apply(
-        lambda row: float(row['cs_per_min']) * 0.01 + 
-                   calculate_kda_from_string(row['KDA']) * 0.002 +
-                   (float(row['gameDuration']) / 60000) * 0.0001,
-        axis=1
-    )
+    """Calcule les dégâts par 1000 or (damage/gold*1000)."""
+    if all(col in df.columns for col in ['GOLD_EARNED', 'TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']):
+        return df.apply(
+            lambda row: (
+                float(row['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']) / float(row['GOLD_EARNED']) * 1000
+                if float(row['GOLD_EARNED']) > 0 else 0
+            ),
+            axis=1
+        )
+    else:
+        # Estimation si les colonnes n'existent pas
+        return df.apply(
+            lambda row: float(row['cs_per_min']) * 10 + calculate_kda_from_string(row['KDA']) * 20,
+            axis=1
+        )
 
-# Nouvelle fonction pour déterminer la classe CSS basée sur l'efficacité d'or en pourcentage
+# Nouvelle fonction pour formater l'efficacité d'or
 def get_gold_efficiency_class(value):
-    """Return color class based on gold efficiency percentage (higher is better for our estimate)."""
-    if value >= 10: return 'color-high'
-    if value >= 5: return 'color-medium'
-    return 'color-low'
+    """Return color class based on damage per 1000 gold."""
+    if value >= 1800: return 'color-high'     # Très bon rapport dégâts/or
+    if value >= 1400: return 'color-medium'   # Bon rapport dégâts/or
+    return 'color-low'                       # Rapport dégâts/or faible
     
 
 def display_champion_stats(df: pd.DataFrame):
