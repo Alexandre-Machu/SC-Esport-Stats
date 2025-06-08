@@ -174,6 +174,14 @@ def display_match_history(df: pd.DataFrame):
         unsafe_allow_html=True
     )
 
+def get_color_class(value: float, thresholds: dict) -> str:
+    """Return color class based on value and thresholds."""
+    if value >= thresholds['high']:
+        return 'color-high'
+    elif value >= thresholds['medium']:
+        return 'color-medium'
+    return 'color-low'
+
 def display_champion_stats(df: pd.DataFrame):
     """Display the champion statistics table."""
     champion_stats = {}
@@ -202,14 +210,32 @@ def display_champion_stats(df: pd.DataFrame):
             'kp': kp
         }
     
+    # Define thresholds for colors
+    thresholds = {
+        'winrate': {'high': 65, 'medium': 50},
+        'kda': {'high': 4, 'medium': 3},
+        'kp': {'high': 60, 'medium': 50}
+    }
+    
     # Convert to DataFrame for display
     display_df = pd.DataFrame()
-    display_df['CHAMPION'] = [f'<img src="{stats["icon_url"]}" width="30" height="30"> {stats["name"]}' 
-                             for stats in champion_stats.values()]
+    display_df['CHAMPION'] = [
+        f'<img src="{stats["icon_url"]}" width="30" height="30"> {stats["name"]}' 
+        for stats in champion_stats.values()
+    ]
     display_df['GAMES'] = [stats['games'] for stats in champion_stats.values()]
-    display_df['WR'] = [f"{stats['winrate']:.1f}%" for stats in champion_stats.values()]
-    display_df['KDA'] = [f"{stats['kda']:.2f}" for stats in champion_stats.values()]
-    display_df['KP'] = [f"{stats['kp']:.1f}%" for stats in champion_stats.values()]
+    display_df['WR'] = [
+        f'<span class="{get_color_class(stats["winrate"], thresholds["winrate"])}">{stats["winrate"]:.1f}%</span>'
+        for stats in champion_stats.values()
+    ]
+    display_df['KDA'] = [
+        f'<span class="{get_color_class(stats["kda"], thresholds["kda"])}">{stats["kda"]:.2f}</span>'
+        for stats in champion_stats.values()
+    ]
+    display_df['KP'] = [
+        f'<span class="{get_color_class(stats["kp"], thresholds["kp"])}">{stats["kp"]:.1f}%</span>'
+        for stats in champion_stats.values()
+    ]
     
     # Sort by number of games
     display_df = display_df.sort_values('GAMES', ascending=False)
