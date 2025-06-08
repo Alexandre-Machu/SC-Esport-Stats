@@ -1,5 +1,16 @@
 import streamlit as st
 
+# Ajouter cette fonction de tri en haut du fichier
+def get_role_order(role):
+    role_order = {
+        'TOP': 1,
+        'JUNGLE': 2,
+        'MID': 3,
+        'ADC': 4,
+        'SUPPORT': 5
+    }
+    return role_order.get(role, 99)
+
 def display_global_stats(analyzer, game_type: str = "Global"):
     stats = analyzer.get_global_stats(game_type)  # Modifier cette fonction pour filtrer selon le type
     #print("Debug - Stats structure:", stats)  # Pour débugger
@@ -269,7 +280,14 @@ def display_global_stats(analyzer, game_type: str = "Global"):
     st.markdown('<div class="player-overview-title">PLAYERS OVERVIEW</div>', unsafe_allow_html=True)
 
     # Section Players Overview
-    for player_name, player_data in stats['player_stats'].items():
+    # Trier les joueurs par rôle
+    sorted_players = sorted(
+        stats['player_stats'].items(),
+        key=lambda x: get_role_order(x[1]['role'])
+    )
+
+    # Afficher les joueurs dans l'ordre
+    for player_name, player_data in sorted_players:
         role_mapping = {
             'TOP': 'top',
             'JUNGLE': 'jungle',
@@ -309,7 +327,9 @@ def display_global_stats(analyzer, game_type: str = "Global"):
         </div>
     </div>
     <div class="player-champions-list">
-        {''.join([f'<div class="champion-mini-container"><img src="https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/{champ}.png" class="champion-mini-icon" title="{champ}"><span class="champion-play-count">{count}</span></div>' for champ, count in player_data['champion_counts'].items()])}
+        {''.join([f'<div class="champion-mini-container"><img src="https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/{champ}.png" class="champion-mini-icon" title="{champ}"><span class="champion-play-count">{count}</span></div>' 
+                 for champ, count in sorted(player_data['champion_counts'].items(), 
+                                         key=lambda x: (-x[1], x[0]))])}
     </div>
 </div>"""
         
