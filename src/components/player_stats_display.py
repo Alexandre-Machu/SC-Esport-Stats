@@ -339,50 +339,22 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
         display_df_clean['CS/min'] = display_df_clean['CS/min'].apply(safe_numeric_conversion)
         display_df_clean['Vision Score'] = display_df_clean['Vision Score'].apply(safe_numeric_conversion)
 
-        # Affichage sans conversion de type supplémentaire
-        st.markdown(
-            display_df_clean.style
+        # Create the styled table
+        styled_df = (display_df_clean.style
             .format({
                 'KDA': '{:.2f}',
                 'CS/min': '{:.1f}',
                 'Vision Score': '{:.0f}',
                 'KP': lambda x: f"{float(str(x).rstrip('%')):.1f}%" if pd.notnull(x) else "0.0%"
             })
-            .set_table_styles([
-                {'selector': 'thead th', 'props': [
-                    ('background-color', 'rgba(40, 40, 50, 0.9)'),
-                    ('color', '#8890A0'),
-                    ('font-weight', '600'),
-                    ('text-transform', 'uppercase'),
-                    ('font-size', '0.85em'),
-                    ('padding', '15px'),
-                    ('border-bottom', '2px solid rgba(255, 255, 255, 0.1)')
-                ]},
-                {'selector': 'tbody tr', 'props': [
-                    ('background-color', 'rgba(30, 30, 40, 0.8)'),
-                    ('transition', 'background-color 0.3s ease')
-                ]},
-                {'selector': 'tbody tr:hover', 'props': [
-                    ('background-color', 'rgba(255, 255, 255, 0.05)')
-                ]},
-                {'selector': 'td', 'props': [
-                    ('padding', '12px 15px'),
-                    ('border-bottom', '1px solid rgba(255, 255, 255, 0.05)'),
-                    ('color', '#ffffff')
-                ]}
-            ])
-            .apply(lambda x: [
-                'color: #2ECC71; font-weight: bold' if '✅' in str(v) else
-                'color: #E74C3C; font-weight: bold' if '❌' in str(v) else
-                'color: #3498db' if '⚔️' in str(v) else
-                'color: #f1c40f' if '🛡️' in str(v) else
-                'color: #2ecc71; font-weight: bold' if x.name == 'KDA' else
-                'color: #ffffff; font-weight: bold' if x.name == 'KP' else
-                '' for v in x
-            ], axis=1)
-            .to_html(escape=False),
-            unsafe_allow_html=True
-        )
+            .set_table_attributes('class="styled-table"')
+            .to_html(index=False))  # Use to_html instead of render and hide_index
+        
+        # Ne plus encoder en ASCII pour préserver les emojis
+        # styled_df = styled_df.encode('ascii', 'ignore').decode('ascii')  # Supprimer cette ligne
+        
+        # Display the table
+        st.write(styled_df, unsafe_allow_html=True)
 
         # Add CSS for visual separation
         st.markdown("""
@@ -410,118 +382,42 @@ def display_player_stats(analyzer, player_name: str, game_type: str = "Global"):
 
     st.markdown("""
         <style>
-        /* Table Container */
-        .dataframe {
+        .styled-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            background: rgba(30, 30, 40, 0.8);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             margin: 20px 0;
+            background: rgba(30, 30, 40, 0.8);
+            border-radius: 8px;
+            overflow: hidden;
         }
-
-        /* Headers */
-        .dataframe thead {
+        
+        .styled-table thead th {
             background: rgba(40, 40, 50, 0.9);
-        }
-
-        .dataframe thead th {
-            padding: 15px;
-            text-align: center;
-            font-weight: 600;
             color: #8890A0;
+            padding: 12px;
+            font-weight: 600;
             text-transform: uppercase;
             font-size: 0.85em;
-            letter-spacing: 0.05em;
             border-bottom: 2px solid rgba(255, 255, 255, 0.1);
         }
-
-        /* Table Body */
-        .dataframe tbody tr {
-            transition: background-color 0.3s ease;
+        
+        .styled-table tbody tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-
-        .dataframe tbody tr:hover {
+        
+        .styled-table tbody tr:hover {
             background: rgba(255, 255, 255, 0.05);
         }
-
-        .dataframe tbody td {
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        
+        .styled-table td {
+            padding: 12px;
             color: #ffffff;
-            text-align: center;
         }
-
-        /* Win/Loss Column */
-        .dataframe td:has(span:contains("✅")) {
-            color: #2ECC71;
-            font-weight: bold;
-        }
-
-        .dataframe td:has(span:contains("❌")) {
-            color: #E74C3C;
-            font-weight: bold;
-        }
-
-        /* Champion Column */
-        .dataframe td:nth-child(2) {
-            text-align: left;
-        }
-
-        .dataframe td:nth-child(2) img {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.2s ease;
+        
+        .styled-table td img {
             vertical-align: middle;
             margin-right: 8px;
-        }
-
-        .dataframe td:nth-child(2):hover img {
-            transform: scale(1.15);
-        }
-
-        /* Game Type Icons */
-        .dataframe td:has(span:contains("⚔️")) {
-            color: #3498db;
-        }
-
-        .dataframe td:has(span:contains("🛡️")) {
-            color: #f1c40f;
-        }
-
-        /* Numeric Columns */
-        .dataframe td:nth-child(n+7) {
-            font-family: "JetBrains Mono", monospace;
-            font-weight: 500;
-        }
-
-        /* KDA Column special styling */
-        .dataframe td:nth-child(8) {
-            color: #2ecc71;
-            font-weight: bold;
-        }
-
-        /* KP Column special styling */
-        .dataframe td:nth-child(14) {
-            color: #ffffff;
-            font-weight: bold;
-        }
-
-        /* Game Separation */
-        .dataframe tbody tr:has(td:contains("Game 1")) {
-            border-top: 8px solid rgba(40, 40, 50, 0.8);
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .dataframe td, .dataframe th {
-                padding: 8px 10px;
-                font-size: 0.9em;
-            }
         }
         </style>
     """, unsafe_allow_html=True)
