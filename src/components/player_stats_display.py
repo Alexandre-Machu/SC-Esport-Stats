@@ -221,11 +221,23 @@ def display_match_history(df: pd.DataFrame):
         lambda x: f"<span class='{get_gold_efficiency_class(x)}'>{x:.1f}</span>"
     )
     
-    # Display table
-    st.write(
-        display_df.to_html(escape=False, index=False),
-        unsafe_allow_html=True
-    )
+    # Display table with tooltips for column headers
+    html_table = display_df.to_html(escape=False, index=False)
+    
+    # Add tooltips to column headers
+    tooltips = {
+        "<th>KDA</th>": "<th title='Kills+Assists / Deaths - Score d&#39;efficacité combative'>KDA</th>",
+        "<th>CS/MIN</th>": "<th title='Creep Score par minute - Mesure l&#39;efficacité du farming'>CS/MIN</th>",
+        "<th>KP</th>": "<th title='Kill Participation - % de participation aux éliminations de l&#39;équipe'>KP</th>",
+        "<th>VISION</th>": "<th title='Score de vision - Efficacité du contrôle de la carte'>VISION</th>",
+        "<th>GOLD EFF</th>": "<th title='Dégâts infligés par 1000 or - Mesure l&#39;efficacité de l&#39;or dépensé'>GOLD EFF</th>",
+    }
+    
+    # Replace headers with tooltipped versions
+    for original, tooltipped in tooltips.items():
+        html_table = html_table.replace(original, tooltipped)
+    
+    st.markdown(html_table, unsafe_allow_html=True)
 
 # Fonction pour calculer le KDA numérique à partir de la chaîne KDA
 def calculate_kda_from_string(kda_str):
