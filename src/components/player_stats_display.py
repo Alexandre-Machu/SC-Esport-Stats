@@ -187,25 +187,23 @@ def display_match_history(df: pd.DataFrame):
     # Ajouter VISION SCORE avec efficacité si disponible
     if 'VISION_SCORE' in df.columns:
         # Estimer la vision efficiency à partir des données disponibles
-        # Puisque nous n'avons pas les données réelles, nous utilisons un calcul approximatif
         est_vision_eff = calculate_est_vision_efficiency(df)
         
         if est_vision_eff is not None:
             df['est_vision_efficiency'] = est_vision_eff
             display_df['VISION'] = df.apply(
-                lambda row: f"{row['VISION_SCORE']} ({row['est_vision_efficiency']:.0f}%)",
+                lambda row: f"{row['VISION_SCORE']} (<span class='{get_vision_class(row['est_vision_efficiency'])}'>{row['est_vision_efficiency']:.0f}%</span>)",
                 axis=1
             )
         else:
             display_df['VISION'] = df['VISION_SCORE'].astype(str)
     
     # Calculer l'efficacité d'or (même si nous n'avons pas les données exactes)
-    # Nous pouvons estimer à partir des kills/assists/deaths et du temps de jeu
     df['gold_efficiency'] = calculate_est_gold_efficiency(df)
     
-    # Ajouter la colonne GOLD EFF avec formatage conditionnel
+    # Ajouter la colonne GOLD EFF avec formatage conditionnel et pourcentage
     display_df['GOLD EFF'] = df['gold_efficiency'].apply(
-        lambda x: f"<span class='{get_gold_efficiency_class(x)}'>{x:.3f}</span>"
+        lambda x: f"<span class='{get_gold_efficiency_class(x * 100)}'>{x * 100:.1f}%</span>"
     )
     
     # Display table
@@ -231,6 +229,13 @@ def get_kda_class(value):
     if value >= 3: return 'color-medium'
     return 'color-low'
 
+# Fonction pour déterminer la classe CSS basée sur l'efficacité de vision
+def get_vision_class(value):
+    """Return color class based on vision efficiency percentage."""
+    if value >= 75: return 'color-high'
+    if value >= 50: return 'color-medium'
+    return 'color-low'
+
 # Fonction pour estimer l'efficacité de vision (approximation puisque nous n'avons pas les données exactes)
 def calculate_est_vision_efficiency(df):
     if 'VISION_SCORE' not in df.columns:
@@ -251,11 +256,11 @@ def calculate_est_gold_efficiency(df):
         axis=1
     )
 
-# Nouvelle fonction pour déterminer la classe CSS basée sur l'efficacité d'or
+# Nouvelle fonction pour déterminer la classe CSS basée sur l'efficacité d'or en pourcentage
 def get_gold_efficiency_class(value):
-    """Return color class based on gold efficiency (higher is better for our estimate)."""
-    if value >= 0.1: return 'color-high'
-    if value >= 0.05: return 'color-medium'
+    """Return color class based on gold efficiency percentage (higher is better for our estimate)."""
+    if value >= 10: return 'color-high'
+    if value >= 5: return 'color-medium'
     return 'color-low'
     
 
