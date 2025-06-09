@@ -224,10 +224,14 @@ def display_match_history(df: pd.DataFrame):
     
     # Calculer gold efficiency
     if all(col in df.columns for col in ['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS', 'GOLD_EARNED']):
+        # Stocker les valeurs brutes pour le tooltip
+        df['dmg_dealt'] = df['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS'].astype(float)
+        df['gold'] = df['GOLD_EARNED'].astype(float)
+        
         df['gold_efficiency'] = df.apply(
             lambda row: (
-                row['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS'] / row['GOLD_EARNED'] * 1000
-                if row['GOLD_EARNED'] > 0 else 0
+                row['dmg_dealt'] / row['gold'] * 1000
+                if row['gold'] > 0 else 0
             ),
             axis=1
         )
@@ -237,6 +241,8 @@ def display_match_history(df: pd.DataFrame):
             lambda row: float(row['cs_per_min']) * 50 + calculate_kda_from_string(row['KDA']) * 100,
             axis=1
         )
+        df['dmg_dealt'] = 0
+        df['gold'] = 0
     
     # Prepare display DataFrame
     display_df = pd.DataFrame()
@@ -266,18 +272,30 @@ def display_match_history(df: pd.DataFrame):
         axis=1
     )
     
-    display_df['CS/MIN'] = df['cs_per_min'].round(1)
-    
-    # Kill Participation
+    # Kill Participation avec tooltip expliquant le calcul
     if 'KP' in df.columns:
-        display_df['KP'] = df['KP'].apply(lambda x: f"{float(x):.1f}%")
+        # Stocker les valeurs brutes pour le calcul
+        df['player_contribution'] = df.apply(
+            lambda row: int(row['CHAMPIONS_KILLED']) + int(row['ASSISTS']),
+            axis=1
+        )
+        
+        # Créer le tooltip avec explication du calcul
+        display_df['KP'] = df.apply(
+            lambda row: f"<span title='Calcul: {int(row['player_contribution'])} (kills+assists) ÷ {int(row['player_contribution']/row['KP']*100 if row['KP'] > 0 else 0)} kills équipe = {float(row['KP']):.1f}%'>{float(row['KP']):.1f}%</span>",
+            axis=1
+        )
     
-    # VISION: utiliser la colonne formatée préparée plus haut
-    display_df['VISION'] = df['VISION_FORMATTED']
+    # CS/MIN avec tooltip expliquant le calcul
+    display_df['CS/MIN'] = df.apply(
+        lambda row: f"<span title='Calcul: {int(row['Missions_CreepScore'])} cs ÷ {(float(row['gameDuration'])/60000):.1f} minutes = {row['cs_per_min']:.1f}'>{row['cs_per_min']:.1f}</span>",
+        axis=1
+    )
     
-    # Gold efficiency
-    display_df['GOLD EFF'] = df['gold_efficiency'].apply(
-        lambda x: f"<span class='{get_gold_efficiency_class(x)}'>{x:.1f}</span>"
+    # Gold efficiency with tooltip showing calculation details
+    display_df['GOLD EFF'] = df.apply(
+        lambda row: f"<span class='{get_gold_efficiency_class(row['gold_efficiency'])}' title='Calcul: {int(row['dmg_dealt']):,} dégâts ÷ {int(row['gold']):,} or = {row['gold_efficiency']:.2f} dégâts par 1000 or'>{row['gold_efficiency']:.1f}</span>",
+        axis=1
     )
     
     # Prepare HTML table with tooltips
