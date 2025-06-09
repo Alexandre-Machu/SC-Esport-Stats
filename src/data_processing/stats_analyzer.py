@@ -340,7 +340,11 @@ class StatsAnalyzer:
                         'type_partie': game['type_partie'],
                         'equipe_adverse': game['equipe_adverse'],
                         'Missions_CreepScore': participant['Missions_CreepScore'],
-                        'VISION_SCORE': participant['VISION_SCORE'],
+                        'VISION_SCORE': participant.get('VISION_SCORE', '0'),
+                        'Missions_PlaceUsefulControlWards': participant.get('Missions_PlaceUsefulControlWards', '0'),
+                        'VISION_WARDS_BOUGHT_IN_GAME': participant.get('VISION_WARDS_BOUGHT_IN_GAME', '0'),
+                        'TOTAL_DAMAGE_DEALT_TO_CHAMPIONS': participant.get('TOTAL_DAMAGE_DEALT_TO_CHAMPIONS', '0'),
+                        'GOLD_EARNED': participant.get('GOLD_EARNED', '0'),
                         'gameDuration': game['gameDuration'],
                         'KP': 0,  # Initialisation
                         'numero_game': game.get('numero_game', '1'),  # Default to '1' if not found
@@ -350,6 +354,11 @@ class StatsAnalyzer:
                     # Calculate KP directly here
                     player_contribution = int(participant['CHAMPIONS_KILLED']) + int(participant['ASSISTS'])
                     match_info['KP'] = round((player_contribution / game_team_kills * 100), 1) if game_team_kills > 0 else 0
+                    
+                    # Calculate gold efficiency (damage to champions per gold earned)
+                    gold_earned = int(participant.get('GOLD_EARNED', '0'))
+                    damage_to_champions = int(participant.get('TOTAL_DAMAGE_DEALT_TO_CHAMPIONS', '0'))
+                    match_info['GOLD_EFFICIENCY'] = round(damage_to_champions / gold_earned, 2) if gold_earned > 0 else 0
 
                     match_history.append(match_info)
                 
@@ -358,7 +367,7 @@ class StatsAnalyzer:
                     total_deaths += int(participant['NUM_DEATHS'])
                     total_assists += int(participant['ASSISTS'])
                     total_cs += int(participant['Missions_CreepScore'])
-                    total_vision += int(participant.get('VISION_SCORE', 0))
+                    total_vision += int(participant.get('VISION_SCORE', '0'))
                     game_duration_minutes += float(game['gameDuration']) / 60000  # Correction: divisé par 60000 pour convertir ms en minutes
                 
                     break
