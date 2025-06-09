@@ -157,19 +157,61 @@
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Colors for stats values */
+/* Updated pastel color scheme */
 .color-high {
-    color: #2ECC71 !important;
+    color: #FFD700 !important; /* Gold color for excellent stats */
+    font-weight: 600;
+}
+
+.color-good {
+    color: #2ECC71 !important; /* Green color for good stats */
     font-weight: 600;
 }
 
 .color-medium {
-    color: #F1C40F !important;
+    color: #FF8C00 !important; /* Orange for medium stats */
     font-weight: 600;
 }
 
 .color-low {
-    color: #E74C3C !important;
+    color: #E74C3C !important; /* Red for poor stats */
+    font-weight: 600;
+}
+
+/* New pastel color scheme for KDA */
+.kda-gold {
+    color: #FFD700 !important; /* Gold color for exceptional KDA (5+) */
+    font-weight: 600;
+}
+
+.kda-high {
+    color: #B39DDB !important; /* Pastel violet for excellent KDA (4-4.99) */
+    font-weight: 600;
+}
+
+.kda-medium {
+    color: #4DD0E1 !important; /* Cyan blue for decent KDA (3-3.99) */
+    font-weight: 600;
+}
+
+.kda-low {
+    color: #9E9E9E !important; /* Gray for low KDA (<3) */
+    font-weight: 600;
+}
+
+/* Winrate colors */
+.wr-high {
+    color: #FFD700 !important; /* Gold for high winrate (60%+) */
+    font-weight: 600;
+}
+
+.wr-medium {
+    color: #2ECC71 !important; /* Green for decent winrate (50-60%) */
+    font-weight: 600;
+}
+
+.wr-low {
+    color: #9E9E9E !important; /* Gray for low winrate (<50%) */
     font-weight: 600;
 }
 

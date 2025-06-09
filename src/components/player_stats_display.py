@@ -255,9 +255,9 @@ def display_match_history(df: pd.DataFrame):
             axis=1
         )
     
-    # CS/MIN avec tooltip expliquant le calcul
+    # CS/MIN with tooltip, updated color classes and star for excellent values
     display_df['CS/MIN'] = df.apply(
-        lambda row: f"<span title='Calcul: {int(row['Missions_CreepScore'])} cs ÷ {(float(row['gameDuration'])/60000):.1f} minutes = {row['cs_per_min']:.1f}'>{row['cs_per_min']:.1f}</span>",
+        lambda row: f"<span class='{get_cs_class(row['cs_per_min'])}' title='Calcul: {int(row['Missions_CreepScore'])} cs ÷ {(float(row['gameDuration'])/60000):.1f} minutes = {row['cs_per_min']:.1f}'>{row['cs_per_min']:.1f}{' ⭐' if float(row['cs_per_min']) >= 9 else ''}</span>",
         axis=1
     )
     
@@ -299,28 +299,54 @@ def calculate_kda_from_string(kda_str):
     except (IndexError, ValueError):
         return 0
 
-# Fonction pour déterminer la classe CSS basée sur le KDA
+# Function to determine CSS class based on KDA - updated with pastel colors
 def get_kda_class(value):
     """Return color class based on KDA value."""
-    if value >= 4: return 'color-high'     # Excellent KDA (4+)
-    if value >= 3: return 'color-medium'   # Good KDA (3-4)
-    return 'color-low'                     # Standard KDA <3
+    if value >= 5: return 'kda-gold'     # Gold for exceptional KDA (5+)
+    if value >= 4: return 'kda-high'     # Pastel violet for excellent KDA (4-4.99)
+    if value >= 3: return 'kda-medium'   # Cyan blue for good KDA (3-3.99)
+    return 'kda-low'                     # Gray for standard KDA (<3)
 
-# Fonction pour déterminer la classe CSS basée sur l'efficacité de vision
+# Function to determine CSS class based on vision efficiency
 def get_vision_class(value):
     """Return color class based on vision efficiency percentage."""
-    if value >= 75: return 'color-high'
-    if value >= 50: return 'color-medium'
-    return 'color-low'
+    if value >= 75: return 'color-high'     # Gold for excellent vision (75%+)
+    if value >= 50: return 'color-good'     # Green for good vision (50-75%)
+    if value >= 30: return 'color-medium'   # Orange for medium vision (30-50%)
+    return 'color-low'                      # Red for poor vision (<30%)
 
-# Nouvelle fonction simplifiée pour formater les données de vision
-def format_vision_data(vision_score, useful_wards, bought_wards, efficiency_pct):
-    """Format vision data into a string with efficiency percentage"""
-    if bought_wards > 0:
-        tooltip = f"Wards utiles: {useful_wards}, Wards achetées: {bought_wards}, Ratio: {useful_wards}/{bought_wards} = {efficiency_pct:.0f}%"
-        return f"{vision_score} ({useful_wards}/{bought_wards}) <span title='{tooltip}' class='{get_vision_class(efficiency_pct)}'>{efficiency_pct:.0f}%</span>"
-    else:
-        return f"{vision_score} (0/0) <span class='color-low'>0%</span>"
+# Function to determine CSS class based on CS/min with added star for excellent values
+def get_cs_class(value):
+    """Return color class based on CS per minute."""
+    try:
+        value = float(value)
+        if value >= 9: return 'color-high'      # Gold + star for excellent CS (9+)
+        if value >= 8: return 'color-good'      # Green for good CS (8-9)
+        if value >= 6: return 'color-medium'    # Orange for okay CS (6-8)
+        return 'color-low'                      # Red for poor CS (<6)
+    except (ValueError, TypeError):
+        return 'color-low'
+
+# Get CSS class for winrate
+def get_wr_class(value):
+    """Return color class based on winrate percentage."""
+    try:
+        value = float(value)
+        if value >= 60: return 'wr-high'      # Gold for high winrate (60%+)
+        if value >= 50: return 'wr-medium'    # Green for decent winrate (50-60%)
+        return 'wr-low'                       # Gray for low winrate (<50%)
+    except (ValueError, TypeError):
+        return 'wr-low'
+
+def get_color_class(value: float, thresholds: dict) -> str:
+    """Return color class based on value and thresholds."""
+    if value >= thresholds['high']:
+        return 'color-high'    # Gold for high values
+    elif 'good' in thresholds and value >= thresholds['good']:
+        return 'color-good'    # Green for good values
+    elif value >= thresholds['medium']:
+        return 'color-medium'  # Orange for medium values
+    return 'color-low'         # Red for low values
 
 def display_champion_stats(df: pd.DataFrame):
     """Display the champion statistics table."""
@@ -350,11 +376,11 @@ def display_champion_stats(df: pd.DataFrame):
             'kp': kp
         }
     
-    # Define thresholds for colors
+    # Define thresholds for colors with new tiers
     thresholds = {
-        'winrate': {'high': 65, 'medium': 50},
-        'kda': {'high': 4, 'medium': 3},
-        'kp': {'high': 60, 'medium': 50}
+        'winrate': {'high': 60, 'good': 50, 'medium': 0},  # Updated thresholds for winrate
+        'kda': {'high': 4, 'good': 3, 'medium': 0},
+        'kp': {'high': 70, 'good': 60, 'medium': 50}
     }
     
     # Convert to DataFrame for display
@@ -365,11 +391,11 @@ def display_champion_stats(df: pd.DataFrame):
     ]
     display_df['GAMES'] = [stats['games'] for stats in champion_stats.values()]
     display_df['WR'] = [
-        f'<span class="{get_color_class(stats["winrate"], thresholds["winrate"])}">{stats["winrate"]:.1f}%</span>'
+        f'<span class="{get_wr_class(stats["winrate"])}">{stats["winrate"]:.1f}%</span>'
         for stats in champion_stats.values()
     ]
     display_df['KDA'] = [
-        f'<span class="{get_color_class(stats["kda"], thresholds["kda"])}">{stats["kda"]:.2f}</span>'
+        f'<span class="{get_kda_class(stats["kda"])}">{stats["kda"]:.2f}</span>'
         for stats in champion_stats.values()
     ]
     display_df['KP'] = [
@@ -386,22 +412,23 @@ def display_champion_stats(df: pd.DataFrame):
         unsafe_allow_html=True
     )
 
+# Nouvelle fonction simplifiée pour formater les données de vision
+def format_vision_data(vision_score, useful_wards, bought_wards, efficiency_pct):
+    """Format vision data into a string with efficiency percentage"""
+    if bought_wards > 0:
+        tooltip = f"Wards utiles: {useful_wards}, Wards achetées: {bought_wards}, Ratio: {useful_wards}/{bought_wards} = {efficiency_pct:.0f}%"
+        return f"{vision_score} ({useful_wards}/{bought_wards}) <span title='{tooltip}' class='{get_vision_class(efficiency_pct)}'>{efficiency_pct:.0f}%</span>"
+    else:
+        return f"{vision_score} (0/0) <span class='color-low'>0%</span>"
+
+# Function to determine CSS class based on gold efficiency
 def get_gold_efficiency_class(value):
     """Return color class based on damage per 1000 gold."""
     try:
-        value = float(value)  # Convert to float for safety
-        if value >= 1600: 
-            return 'color-high'     # Excellent ratio (>1600)
-        if value >= 1300: 
-            return 'color-medium'   # Bon ratio (1300-1600)
-        return 'color-low'          # Ratio standard (<1300)
+        value = float(value)  
+        if value >= 1600: return 'color-high'     # Gold for excellent ratio (>1600)
+        if value >= 1300: return 'color-good'     # Green for good ratio (1300-1600)
+        if value >= 1000: return 'color-medium'   # Orange for okay ratio (1000-1300)
+        return 'color-low'                        # Red for poor ratio (<1000)
     except (ValueError, TypeError):
-        return 'color-low'          # Default if conversion fails
-
-def get_color_class(value: float, thresholds: dict) -> str:
-    """Return color class based on value and thresholds."""
-    if value >= thresholds['high']:
-        return 'color-high'
-    elif value >= thresholds['medium']:
-        return 'color-medium'
-    return 'color-low'
+        return 'color-low'                        # Default if conversion fails
