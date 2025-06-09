@@ -299,13 +299,13 @@ def calculate_kda_from_string(kda_str):
     except (IndexError, ValueError):
         return 0
 
-# Function to determine CSS class based on KDA - updated with pastel colors
+# Function to determine CSS class based on KDA - updated with pastel colors and new thresholds
 def get_kda_class(value):
     """Return color class based on KDA value."""
-    if value >= 5: return 'kda-gold'     # Gold for exceptional KDA (5+)
-    if value >= 4: return 'kda-high'     # Pastel violet for excellent KDA (4-4.99)
-    if value >= 3: return 'kda-medium'   # Cyan blue for good KDA (3-3.99)
-    return 'kda-low'                     # Gray for standard KDA (<3)
+    if value >= 5: return 'kda-gold'       # Gold for exceptional KDA (5+)
+    if value >= 2.5: return 'kda-high'     # Pastel violet for excellent KDA (2.5-4.99)
+    if value >= 1.5: return 'kda-medium'   # Cyan blue for good KDA (1.5-2.49)
+    return 'kda-low'                       # Gray for low KDA (<1.5)
 
 # Function to determine CSS class based on vision efficiency
 def get_vision_class(value):

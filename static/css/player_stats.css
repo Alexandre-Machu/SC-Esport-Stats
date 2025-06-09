@@ -185,17 +185,17 @@
 }
 
 .kda-high {
-    color: #B39DDB !important; /* Pastel violet for excellent KDA (4-4.99) */
+    color: #D4BFFF !important; /* Pastel violet for excellent KDA (2.5-4.99) */
     font-weight: 600;
 }
 
 .kda-medium {
-    color: #4DD0E1 !important; /* Cyan blue for decent KDA (3-3.99) */
+    color: #80DEEA !important; /* Pastel cyan for good KDA (1.5-2.49) */
     font-weight: 600;
 }
 
 .kda-low {
-    color: #9E9E9E !important; /* Gray for low KDA (<3) */
+    color: #BDBDBD !important; /* Light gray for low KDA (<1.5) */
     font-weight: 600;
 }
 
