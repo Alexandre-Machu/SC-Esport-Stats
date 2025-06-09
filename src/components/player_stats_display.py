@@ -150,49 +150,74 @@ def display_match_history(df: pd.DataFrame):
     df['DATE'] = pd.to_datetime(df['date'], format='%d%m%Y')
     df = df.sort_values('DATE', ascending=False)
     
-    # Print columns for debugging
+    # Affichage de diagnostic pour comprendre le problème
+    print("==== DIAGNOSTIC DES DONNÉES DE VISION ====")
     print("Colonnes disponibles:", df.columns.tolist())
-
-    # Convert important columns to numeric safely
-    for col in ['VISION_SCORE', 'VISION_WARDS_BOUGHT_IN_GAME', 'Missions_PlaceUsefulControlWards', 
-               'GOLD_EARNED', 'TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']:
+    
+    # Vérifier si ces colonnes existent vraiment dans le DataFrame
+    vision_cols = ['VISION_SCORE', 'VISION_WARDS_BOUGHT_IN_GAME', 'Missions_PlaceUsefulControlWards']
+    for col in vision_cols:
+        print(f"Colonne '{col}' présente dans le DataFrame: {col in df.columns}")
+        
+    # Extraire des exemples pour chaque champion
+    print("\nExemples de données de vision par champion:")
+    for _, row in df.iterrows():
+        champ = row['SKIN']
+        vision_score = row.get('VISION_SCORE', 'Non disponible')
+        wards_bought = row.get('VISION_WARDS_BOUGHT_IN_GAME', 'Non disponible')
+        useful_wards = row.get('Missions_PlaceUsefulControlWards', 'Non disponible')
+        
+        print(f"Champion: {champ}")
+        print(f"  - VISION_SCORE: {vision_score}")
+        print(f"  - VISION_WARDS_BOUGHT_IN_GAME: {wards_bought}")
+        print(f"  - Missions_PlaceUsefulControlWards: {useful_wards}")
+        print(f"  - Type de Missions_PlaceUsefulControlWards: {type(useful_wards)}")
+    
+    # Le reste du code existant
+    # AMÉLIORATION: Extraction et traitement des données de vision directement du JSON
+    # Assurons-nous que ces colonnes existent et sont correctement interprétées
+    vision_columns = ['VISION_SCORE', 'VISION_WARDS_BOUGHT_IN_GAME', 'Missions_PlaceUsefulControlWards']
+    for col in vision_columns:
+        if col not in df.columns:
+            print(f"ATTENTION: Colonne {col} manquante - vérifiez le format du JSON")
+            # Création d'une colonne vide si elle n'existe pas
+            df[col] = 0
+        else:
+            # S'assurer que la colonne est numérique
+            print(f"Conversion de {col} en numérique. Avant conversion: {df[col].head(3).tolist()}")
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+            print(f"Après conversion: {df[col].head(3).tolist()}")
+    
+    # Convertir les autres colonnes numériques nécessaires
+    for col in ['GOLD_EARNED', 'TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
-            print(f"Colonne {col} convertie en numérique avec succès")
-        else:
-            print(f"ATTENTION: Colonne {col} manquante dans le DataFrame")
     
-    # Create vision metrics safely - Check if columns exist first
-    # Add fallback values for missing columns
-    df['vision_score_value'] = df['VISION_SCORE'].fillna(0).astype(int) if 'VISION_SCORE' in df.columns else 0
+    # Création des colonnes dérivées pour la vision
+    df['vision_score_value'] = df['VISION_SCORE']
+    df['vision_useful_wards'] = df['Missions_PlaceUsefulControlWards']
+    df['vision_bought_wards'] = df['VISION_WARDS_BOUGHT_IN_GAME']
     
-    # Handle missing ward columns by adding default columns with zeros
-    if 'Missions_PlaceUsefulControlWards' not in df.columns:
-        print("INFO: Colonne Missions_PlaceUsefulControlWards manquante, utilisation de valeurs par défaut (0)")
-        df['Missions_PlaceUsefulControlWards'] = 0
-    
-    if 'VISION_WARDS_BOUGHT_IN_GAME' not in df.columns:
-        print("INFO: Colonne VISION_WARDS_BOUGHT_IN_GAME manquante, utilisation de valeurs par défaut (0)")
-        df['VISION_WARDS_BOUGHT_IN_GAME'] = 0
-    
-    # Now safely create the derived columns
-    df['vision_useful_wards'] = df['Missions_PlaceUsefulControlWards'].fillna(0).astype(int)
-    df['vision_bought_wards'] = df['VISION_WARDS_BOUGHT_IN_GAME'].fillna(0).astype(int)
+    # Affiche quelques exemples pour vérification
+    print("Échantillon de données de vision:")
+    vision_sample = df[['SKIN', 'vision_score_value', 'vision_useful_wards', 'vision_bought_wards']].head(3)
+    print(vision_sample)
     
     # Calculate efficiency percentage safely
     df['vision_efficiency_pct'] = df.apply(
-        lambda row: 100 * row['vision_useful_wards'] / row['vision_bought_wards'] 
+        lambda row: 100 * row['vision_useful_wards'] / row['vision_bought_wards']
                     if row['vision_bought_wards'] > 0 else 0,
         axis=1
     )
     
-    # Format vision data for display
+    # Format vision data for display with detailed debugging
+    print("Préparation de l'affichage formaté de la vision...")
     df['VISION_FORMATTED'] = df.apply(
         lambda row: format_vision_data(
-            row['vision_score_value'] if 'vision_score_value' in row else 0,
-            row['vision_useful_wards'] if 'vision_useful_wards' in row else 0,
-            row['vision_bought_wards'] if 'vision_bought_wards' in row else 0,
-            row['vision_efficiency_pct'] if 'vision_efficiency_pct' in row else 0
+            row['vision_score_value'],
+            row['vision_useful_wards'],
+            row['vision_bought_wards'],
+            row['vision_efficiency_pct']
         ),
         axis=1
     )
@@ -301,6 +326,9 @@ def get_vision_class(value):
 # Nouvelle fonction simplifiée pour formater les données de vision
 def format_vision_data(vision_score, useful_wards, bought_wards, efficiency_pct):
     """Format vision data into a string with efficiency percentage"""
+    # Afficher les valeurs pour débogage
+    print(f"Format vision: score={vision_score}, useful={useful_wards}, bought={bought_wards}")
+    
     if bought_wards > 0:
         tooltip = f"Wards utiles: {useful_wards}, Wards achetées: {bought_wards}, Ratio: {useful_wards}/{bought_wards} = {efficiency_pct:.0f}%"
         return f"{vision_score} ({useful_wards}/{bought_wards}) <span title='{tooltip}' class='{get_vision_class(efficiency_pct)}'>{efficiency_pct:.0f}%</span>"
@@ -379,7 +407,7 @@ def get_color_class(value: float, thresholds: dict) -> str:
         return 'color-medium'
     return 'color-low'
 
-# Fonction pour déterminer la classe CSS basée sur l'efficacité d'or
+# Fonction pour déterminer la classe CSS basée sur l'efficacité d'orcité d'or
 def get_gold_efficiency_class(value):
     """Return color class based on damage per 1000 gold."""
     if value >= 1600: return 'color-high'     # Excellent ratio (>1600)
@@ -416,7 +444,7 @@ def try_format_vision_with_efficiency(row):
     except Exception as e:
         print(f"ERREUR accès données wards: {e}")
     
-    # Essayer un autre type d'accès si la méthode précédente a échoué
+    # Essayer un autre type d'accès si la méthode précédente a échouée
     try:
         # Essayer avec __getitem__ ou autre méthode d'accès
         all_attrs = dir(row)
