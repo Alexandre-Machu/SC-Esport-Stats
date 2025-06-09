@@ -150,68 +150,32 @@ def display_match_history(df: pd.DataFrame):
     df['DATE'] = pd.to_datetime(df['date'], format='%d%m%Y')
     df = df.sort_values('DATE', ascending=False)
     
-    # Affichage de diagnostic pour comprendre le problème
-    print("==== DIAGNOSTIC DES DONNÉES DE VISION ====")
-    print("Colonnes disponibles:", df.columns.tolist())
-    
-    # Vérifier si ces colonnes existent vraiment dans le DataFrame
-    vision_cols = ['VISION_SCORE', 'VISION_WARDS_BOUGHT_IN_GAME', 'Missions_PlaceUsefulControlWards']
-    for col in vision_cols:
-        print(f"Colonne '{col}' présente dans le DataFrame: {col in df.columns}")
-        
-    # Extraire des exemples pour chaque champion
-    print("\nExemples de données de vision par champion:")
-    for _, row in df.iterrows():
-        champ = row['SKIN']
-        vision_score = row.get('VISION_SCORE', 'Non disponible')
-        wards_bought = row.get('VISION_WARDS_BOUGHT_IN_GAME', 'Non disponible')
-        useful_wards = row.get('Missions_PlaceUsefulControlWards', 'Non disponible')
-        
-        print(f"Champion: {champ}")
-        print(f"  - VISION_SCORE: {vision_score}")
-        print(f"  - VISION_WARDS_BOUGHT_IN_GAME: {wards_bought}")
-        print(f"  - Missions_PlaceUsefulControlWards: {useful_wards}")
-        print(f"  - Type de Missions_PlaceUsefulControlWards: {type(useful_wards)}")
-    
-    # Le reste du code existant
-    # AMÉLIORATION: Extraction et traitement des données de vision directement du JSON
-    # Assurons-nous que ces colonnes existent et sont correctement interprétées
+    # Ensure vision columns exist and convert to numeric
     vision_columns = ['VISION_SCORE', 'VISION_WARDS_BOUGHT_IN_GAME', 'Missions_PlaceUsefulControlWards']
     for col in vision_columns:
         if col not in df.columns:
-            print(f"ATTENTION: Colonne {col} manquante - vérifiez le format du JSON")
-            # Création d'une colonne vide si elle n'existe pas
             df[col] = 0
         else:
-            # S'assurer que la colonne est numérique
-            print(f"Conversion de {col} en numérique. Avant conversion: {df[col].head(3).tolist()}")
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
-            print(f"Après conversion: {df[col].head(3).tolist()}")
     
-    # Convertir les autres colonnes numériques nécessaires
+    # Convert other numeric columns
     for col in ['GOLD_EARNED', 'TOTAL_DAMAGE_DEALT_TO_CHAMPIONS']:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
     
-    # Création des colonnes dérivées pour la vision
+    # Create derived columns for vision
     df['vision_score_value'] = df['VISION_SCORE']
     df['vision_useful_wards'] = df['Missions_PlaceUsefulControlWards']
     df['vision_bought_wards'] = df['VISION_WARDS_BOUGHT_IN_GAME']
     
-    # Affiche quelques exemples pour vérification
-    print("Échantillon de données de vision:")
-    vision_sample = df[['SKIN', 'vision_score_value', 'vision_useful_wards', 'vision_bought_wards']].head(3)
-    print(vision_sample)
-    
-    # Calculate efficiency percentage safely
+    # Calculate vision efficiency percentage
     df['vision_efficiency_pct'] = df.apply(
         lambda row: 100 * row['vision_useful_wards'] / row['vision_bought_wards']
                     if row['vision_bought_wards'] > 0 else 0,
         axis=1
     )
     
-    # Format vision data for display with detailed debugging
-    print("Préparation de l'affichage formaté de la vision...")
+    # Format vision data for display
     df['VISION_FORMATTED'] = df.apply(
         lambda row: format_vision_data(
             row['vision_score_value'],
@@ -222,25 +186,30 @@ def display_match_history(df: pd.DataFrame):
         axis=1
     )
     
-    # Calculer gold efficiency
-    if all(col in df.columns for col in ['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS', 'GOLD_EARNED']):
-        # Stocker les valeurs brutes pour le tooltip
-        df['dmg_dealt'] = df['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS'].astype(float)
-        df['gold'] = df['GOLD_EARNED'].astype(float)
-        
-        df['gold_efficiency'] = df.apply(
-            lambda row: (
-                row['dmg_dealt'] / row['gold'] * 1000
-                if row['gold'] > 0 else 0
-            ),
-            axis=1
-        )
-    else:
-        # Fallback pour gold_efficiency
-        df['gold_efficiency'] = df.apply(
-            lambda row: float(row['cs_per_min']) * 50 + calculate_kda_from_string(row['KDA']) * 100,
-            axis=1
-        )
+    # Calculate gold efficiency - fixing the error by ensuring values exist
+    try:
+        if all(col in df.columns for col in ['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS', 'GOLD_EARNED']):
+            # Store raw values for tooltip and ensure they're numeric
+            df['dmg_dealt'] = pd.to_numeric(df['TOTAL_DAMAGE_DEALT_TO_CHAMPIONS'], errors='coerce').fillna(0)
+            df['gold'] = pd.to_numeric(df['GOLD_EARNED'], errors='coerce').fillna(0)
+            
+            # Calculate gold efficiency safely
+            df['gold_efficiency'] = df.apply(
+                lambda row: (
+                    row['dmg_dealt'] / row['gold'] * 1000
+                    if row['gold'] > 0 else 0
+                ),
+                axis=1
+            )
+        else:
+            # Ensure safe fallback if columns are missing
+            df['cs_per_min'] = df['cs_per_min'] if 'cs_per_min' in df.columns else 0
+            df['gold_efficiency'] = df['cs_per_min'] * 50
+            df['dmg_dealt'] = 0
+            df['gold'] = 0
+    except Exception as e:
+        # If anything goes wrong, provide placeholder values
+        df['gold_efficiency'] = 0
         df['dmg_dealt'] = 0
         df['gold'] = 0
     
@@ -292,16 +261,19 @@ def display_match_history(df: pd.DataFrame):
         axis=1
     )
     
+    # VISION: utiliser la colonne formatée sans ajouter CONTROL WARDS
+    display_df['VISION'] = df['VISION_FORMATTED']
+    
     # Gold efficiency with tooltip showing calculation details
     display_df['GOLD EFF'] = df.apply(
-        lambda row: f"<span class='{get_gold_efficiency_class(row['gold_efficiency'])}' title='Calcul: {int(row['dmg_dealt']):,} dégâts ÷ {int(row['gold']):,} or = {row['gold_efficiency']:.2f} dégâts par 1000 or'>{row['gold_efficiency']:.1f}</span>",
+        lambda row: f"<span class='{get_gold_efficiency_class(float(row['gold_efficiency']))}' title='Calcul: {int(max(0, row['dmg_dealt'])):,} dégâts ÷ {int(max(1, row['gold'])):,} or = {float(row['gold_efficiency']):.2f} dégâts par 1000 or'>{float(row['gold_efficiency']):.1f}</span>",
         axis=1
     )
     
     # Prepare HTML table with tooltips
     html_table = display_df.to_html(escape=False, index=False)
     
-    # Add tooltips to headers
+    # Add tooltips to headers - removing CONTROL WARDS tooltip
     tooltips = {
         "<th>KDA</th>": "<th title='Kills+Assists / Deaths - Score d&#39;efficacité combative'>KDA</th>",
         "<th>CS/MIN</th>": "<th title='Creep Score par minute - Mesure l&#39;efficacité du farming'>CS/MIN</th>",
@@ -332,7 +304,7 @@ def get_kda_class(value):
     """Return color class based on KDA value."""
     if value >= 4: return 'color-high'     # Excellent KDA (4+)
     if value >= 3: return 'color-medium'   # Good KDA (3-4)
-    return 'color-low'                     # Standard KDA (<3)
+    return 'color-low'                     # Standard KDA <3
 
 # Fonction pour déterminer la classe CSS basée sur l'efficacité de vision
 def get_vision_class(value):
@@ -344,9 +316,6 @@ def get_vision_class(value):
 # Nouvelle fonction simplifiée pour formater les données de vision
 def format_vision_data(vision_score, useful_wards, bought_wards, efficiency_pct):
     """Format vision data into a string with efficiency percentage"""
-    # Afficher les valeurs pour débogage
-    print(f"Format vision: score={vision_score}, useful={useful_wards}, bought={bought_wards}")
-    
     if bought_wards > 0:
         tooltip = f"Wards utiles: {useful_wards}, Wards achetées: {bought_wards}, Ratio: {useful_wards}/{bought_wards} = {efficiency_pct:.0f}%"
         return f"{vision_score} ({useful_wards}/{bought_wards}) <span title='{tooltip}' class='{get_vision_class(efficiency_pct)}'>{efficiency_pct:.0f}%</span>"
@@ -369,116 +338,35 @@ def display_champion_stats(df: pd.DataFrame):
         assists = kda_parts[2].astype(float).mean()
         kda = (kills + assists) / max(1, deaths)
         
-        # Calculate KP
-        kp = champ_data['KP'].astype(float).mean()
-        
+        # Store champion stats
         champion_stats[champ] = {
-            'name': format_champion_name(champ),
-            'icon_url': get_champion_icon_url(champ),
             'games': games,
-            'winrate': (wins / games) * 100,
+            'wins': wins,
             'kda': kda,
-            'kp': kp
+            'avg_kills': kills,
+            'avg_deaths': deaths,
+            'avg_assists': assists,
+            'win_rate': wins / games * 100 if games > 0 else 0
         }
     
-    # Define thresholds for colors
-    thresholds = {
-        'winrate': {'high': 65, 'medium': 50},
-        'kda': {'high': 4, 'medium': 3},
-        'kp': {'high': 60, 'medium': 50}
-    }
+    # Convert to DataFrame
+    stats_df = pd.DataFrame.from_dict(champion_stats, orient='index')
+    stats_df = stats_df.reset_index().rename(columns={'index': 'Champion'})
     
-    # Convert to DataFrame for display
-    display_df = pd.DataFrame()
-    display_df['CHAMPION'] = [
-        f'<img src="{stats["icon_url"]}" width="30" height="30"> {stats["name"]}' 
-        for stats in champion_stats.values()
-    ]
-    display_df['GAMES'] = [stats['games'] for stats in champion_stats.values()]
-    display_df['WR'] = [
-        f'<span class="{get_color_class(stats["winrate"], thresholds["winrate"])}">{stats["winrate"]:.1f}%</span>'
-        for stats in champion_stats.values()
-    ]
-    display_df['KDA'] = [
-        f'<span class="{get_color_class(stats["kda"], thresholds["kda"])}">{stats["kda"]:.2f}</span>'
-        for stats in champion_stats.values()
-    ]
-    display_df['KP'] = [
-        f'<span class="{get_color_class(stats["kp"], thresholds["kp"])}">{stats["kp"]:.1f}%</span>'
-        for stats in champion_stats.values()
-    ]
+    # Sort by win rate
+    stats_df = stats_df.sort_values(by='win_rate', ascending=False)
     
-    # Sort by number of games
-    display_df = display_df.sort_values('GAMES', ascending=False)
-    
-    # Display table
-    st.write(
-        display_df.to_html(escape=False, index=False),
-        unsafe_allow_html=True
-    )
+    # Display the table
+    st.write(stats_df)
 
-def get_color_class(value: float, thresholds: dict) -> str:
-    """Return color class based on value and thresholds."""
-    if value >= thresholds['high']:
-        return 'color-high'
-    elif value >= thresholds['medium']:
-        return 'color-medium'
-    return 'color-low'
-
-# Fonction pour déterminer la classe CSS basée sur l'efficacité d'orcité d'or
 def get_gold_efficiency_class(value):
     """Return color class based on damage per 1000 gold."""
-    if value >= 1600: return 'color-high'     # Excellent ratio (>1600)
-    if value >= 1300: return 'color-medium'   # Bon ratio (1300-1600)
-    return 'color-low'                        # Ratio standard (<1300)
-
-# Fonction corrigée pour accéder correctement aux données des wards
-def try_format_vision_with_efficiency(row):
-    """Format vision score with efficiency calculation fixing data access issues."""
-    vision_score = int(row['VISION_SCORE'])
-    
-    # Vérifier la disponibilité des données sans utiliser l'opérateur 'in'
-    # Certains DataFrames ont des problèmes avec l'accès par clé vs par attribut
     try:
-        # Essayer d'accéder directement aux valeurs
-        bought_value = row.get('VISION_WARDS_BOUGHT_IN_GAME', None)
-        useful_value = row.get('Missions_PlaceUsefulControlWards', None)
-        
-        # Si les valeurs sont accessibles et non nulles
-        if bought_value is not None and useful_value is not None:
-            # Convertir en entiers
-            bought = int(bought_value)
-            useful = int(useful_value)
-            
-            print(f"VALEURS TROUVÉES pour {row.get('SKIN', 'unknown')}: useful={useful}, bought={bought}")
-            
-            # Calculer l'efficacité
-            if bought > 0:
-                eff = 100 * useful / bought
-                tooltip = f"Wards utiles: {useful}, Wards achetées: {bought}, Ratio: {useful}/{bought} = {eff:.0f}%"
-                return f"{vision_score} ({useful}/{bought}) <span title='{tooltip}' class='{get_vision_class(eff)}'>{eff:.0f}%</span>"
-            else:
-                return f"{vision_score} (0/0) <span class='color-low'>0%</span>"
-    except Exception as e:
-        print(f"ERREUR accès données wards: {e}")
-    
-    # Essayer un autre type d'accès si la méthode précédente a échouée
-    try:
-        # Essayer avec __getitem__ ou autre méthode d'accès
-        all_attrs = dir(row)
-        print(f"Recherche de méthodes d'accès alternatives: {[a for a in all_attrs if not a.startswith('_')][:10]}")
-        
-        # Essayer avec getattr
-        if hasattr(row, 'VISION_WARDS_BOUGHT_IN_GAME') and hasattr(row, 'Missions_PlaceUsefulControlWards'):
-            bought = int(getattr(row, 'VISION_WARDS_BOUGHT_IN_GAME'))
-            useful = int(getattr(row, 'Missions_PlaceUsefulControlWards'))
-            
-            if bought > 0:
-                eff = 100 * useful / bought
-                return f"{vision_score} ({useful}/{bought}) <span class='{get_vision_class(eff)}'>{eff:.0f}%</span>"
-    except Exception as e:
-        print(f"ERREUR méthode alternative: {e}")
-    
-    # Fallback si aucune méthode ne fonctionne
-    est_eff = min(100, vision_score * 2)  # Estimation basée sur le score de vision
-    return f"{vision_score} (<span class='color-medium'>{est_eff:.0f}%</span>)"
+        value = float(value)  # Convert to float for safety
+        if value >= 1600: 
+            return 'color-high'     # Excellent ratio (>1600)
+        if value >= 1300: 
+            return 'color-medium'   # Bon ratio (1300-1600)
+        return 'color-low'          # Ratio standard (<1300)
+    except (ValueError, TypeError):
+        return 'color-low'          # Default if conversion fails
