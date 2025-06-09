@@ -338,26 +338,53 @@ def display_champion_stats(df: pd.DataFrame):
         assists = kda_parts[2].astype(float).mean()
         kda = (kills + assists) / max(1, deaths)
         
-        # Store champion stats
+        # Calculate KP
+        kp = champ_data['KP'].astype(float).mean()
+        
         champion_stats[champ] = {
+            'name': format_champion_name(champ),
+            'icon_url': get_champion_icon_url(champ),
             'games': games,
-            'wins': wins,
+            'winrate': (wins / games) * 100,
             'kda': kda,
-            'avg_kills': kills,
-            'avg_deaths': deaths,
-            'avg_assists': assists,
-            'win_rate': wins / games * 100 if games > 0 else 0
+            'kp': kp
         }
     
-    # Convert to DataFrame
-    stats_df = pd.DataFrame.from_dict(champion_stats, orient='index')
-    stats_df = stats_df.reset_index().rename(columns={'index': 'Champion'})
+    # Define thresholds for colors
+    thresholds = {
+        'winrate': {'high': 65, 'medium': 50},
+        'kda': {'high': 4, 'medium': 3},
+        'kp': {'high': 60, 'medium': 50}
+    }
     
-    # Sort by win rate
-    stats_df = stats_df.sort_values(by='win_rate', ascending=False)
+    # Convert to DataFrame for display
+    display_df = pd.DataFrame()
+    display_df['CHAMPION'] = [
+        f'<img src="{stats["icon_url"]}" width="30" height="30"> {stats["name"]}' 
+        for stats in champion_stats.values()
+    ]
+    display_df['GAMES'] = [stats['games'] for stats in champion_stats.values()]
+    display_df['WR'] = [
+        f'<span class="{get_color_class(stats["winrate"], thresholds["winrate"])}">{stats["winrate"]:.1f}%</span>'
+        for stats in champion_stats.values()
+    ]
+    display_df['KDA'] = [
+        f'<span class="{get_color_class(stats["kda"], thresholds["kda"])}">{stats["kda"]:.2f}</span>'
+        for stats in champion_stats.values()
+    ]
+    display_df['KP'] = [
+        f'<span class="{get_color_class(stats["kp"], thresholds["kp"])}">{stats["kp"]:.1f}%</span>'
+        for stats in champion_stats.values()
+    ]
     
-    # Display the table
-    st.write(stats_df)
+    # Sort by number of games
+    display_df = display_df.sort_values('GAMES', ascending=False)
+    
+    # Display table
+    st.write(
+        display_df.to_html(escape=False, index=False),
+        unsafe_allow_html=True
+    )
 
 def get_gold_efficiency_class(value):
     """Return color class based on damage per 1000 gold."""
@@ -370,3 +397,11 @@ def get_gold_efficiency_class(value):
         return 'color-low'          # Ratio standard (<1300)
     except (ValueError, TypeError):
         return 'color-low'          # Default if conversion fails
+
+def get_color_class(value: float, thresholds: dict) -> str:
+    """Return color class based on value and thresholds."""
+    if value >= thresholds['high']:
+        return 'color-high'
+    elif value >= thresholds['medium']:
+        return 'color-medium'
+    return 'color-low'
